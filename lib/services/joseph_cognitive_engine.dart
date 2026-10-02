@@ -1,12 +1,15 @@
+import '../models/document_action.dart';
+import '../models/document_analysis.dart';
+import '../utils/text_matcher.dart';
 import 'academic_knowledge_engine.dart';
 import 'adaptive_engine.dart';
 import 'joseph_document_engine.dart';
 import 'joseph_learning_engine.dart';
 import 'joseph_memory.dart';
+import 'joseph_quiz_engine.dart';
 import 'joseph_reasoning.dart';
 import 'personality_engine.dart';
 import 'prediction_engine.dart';
-import 'joseph_quiz_engine.dart';
 
 class JosephCognitiveEngine {
   final JosephMemory memory;
@@ -16,14 +19,11 @@ class JosephCognitiveEngine {
   final JosephReasoning reasoning;
   final JosephLearningEngine learning;
 
-  final AcademicKnowledgeEngine knowledge =
-      AcademicKnowledgeEngine();
+  final AcademicKnowledgeEngine knowledge = const AcademicKnowledgeEngine();
 
-  final JosephQuizEngine quiz =
-      const JosephQuizEngine();
+  final JosephDocumentEngine documents = const JosephDocumentEngine();
 
-  final JosephDocumentEngine documents =
-      const JosephDocumentEngine();
+  late final JosephQuizEngine quiz = JosephQuizEngine(knowledge);
 
   JosephCognitiveEngine({
     required this.memory,
@@ -34,265 +34,124 @@ class JosephCognitiveEngine {
     required this.learning,
   });
 
+  static const int _maxDefinitions = 3;
+
+  static const int _maxDocumentTopics = 5;
+
+  static const List<String> _quizTerms = ['quiz', 'quizzes'];
+
+  static const List<String> _studyTerms = [
+    'study',
+    'studies',
+    'studying',
+    'recommend',
+    'recommendation',
+  ];
+
+  static const List<String> _weakTerms = ['weak', 'weakness'];
+
+  static const List<String> _strongTerms = ['strong', 'strength'];
+
+  static const List<String> _progressTerms = ['progress'];
+
+  static const List<String> _predictTerms = ['predict', 'prediction'];
+
+  static final RegExp _greetingPattern = RegExp(
+    r'^\s*(hello|hi|hey)\b',
+    caseSensitive: false,
+  );
+
+  static const String _quizGuidance =
+      'I need a topic to build a quiz.\n\n'
+      'Try: quiz anova, quiz regression, quiz photosynthesis or '
+      'quiz epidemiology.';
+
+  static const String _fallbackReply =
+      'I do not have an answer for that yet.\n\n'
+      'Here is what I can do right now:\n'
+      '- Explain topics such as ANOVA, regression, Python or photosynthesis\n'
+      '- Build a quiz, for example: quiz anova\n'
+      '- Recommend what to study next\n'
+      '- Show your weak topics, strong topics, progress and predictions\n'
+      '- Analyse a PDF from the Upload tab';
+
   Map<String, dynamic> think() {
     return {
-      "greeting": personality.greeting(),
-      "learningLevel": memory.learningLevel(),
-      "recommendation": adaptive.nextRecommendation(),
-      "prediction": prediction.predictions(),
-      "insight": reasoning.generateInsight(),
-      "confidence": adaptive.confidenceScore(),
-      "weakTopics": memory.weakTopics,
-      "strongTopics": memory.strongTopics,
+      'greeting': personality.greeting(),
+      'learningLevel': memory.learningLevel(),
+      'recommendation': adaptive.nextRecommendation(),
+      'prediction': prediction.predictions(),
+      'insight': reasoning.generateInsight(),
+      'confidence': adaptive.confidenceScore(),
+      'weakTopics': memory.weakTopics,
+      'strongTopics': memory.strongTopics,
     };
   }
 
+  // Answers a free-text question typed by the student.
   String respond(String question) {
     learning.observeQuestion(question);
 
-    final q = question.toLowerCase();
-
-    // ─────────────────────────────
-    // DOCUMENT ACTIONS
-    // ─────────────────────────────
-
-    if (q.contains("uploaded document:")) {
-      final fileName = _extractValue(
-        question,
-        "Uploaded document:",
-      );
-
-      final documentText =
-          _extractDocumentText(question);
-
-      if (q.contains("summarize again") ||
-          q.contains("summary")) {
-        return documents.summarize(
-          fileName: fileName,
-          text: documentText,
-        );
-      }
-
-      if (q.contains("important topics")) {
-        return documents.importantTopics(
-          text: documentText,
-        );
-      }
-
-      if (q.contains("generate questions")) {
-        return documents.generateQuestions(
-          text: documentText,
-        );
-      }
-
-      if (q.contains("exam prediction") ||
-          q.contains("possible exam")) {
-        return documents.examPrediction(
-          text: documentText,
-        );
-      }
-
-      if (q.contains("study plan")) {
-        return documents.studyPlan(
-          text: documentText,
-        );
-      }
-
-      if (q.contains("revision notes")) {
-        return documents.revisionNotes(
-          text: documentText,
-        );
-      }
+    if (_mentions(question, _quizTerms)) {
+      return _quizReply(question);
     }
 
-    // ─────────────────────────────
-    // GENERAL ACADEMIC KNOWLEDGE
-    // ─────────────────────────────
+    final definitions = knowledge.definitionsIn(question);
 
-    final academic = knowledge.answer(question);
-
-    if (academic != null) {
-      return """
-💡 Answer
-
-$academic
-
-──────────────────
-
-🧠 Joseph's Advice
-
-Understanding the idea is more important than memorising it.
-
-Ask me:
-• Explain further
-• Give examples
-• Generate quiz
-• Exam tips
-""";
+    if (definitions.isNotEmpty) {
+      return _definitionReply(definitions);
     }
 
-    // ─────────────────────────────
-    // GREETING
-    // ─────────────────────────────
-
-    if (q.contains("hello") ||
-        q.contains("hi") ||
-        q.contains("hey")) {
-      return "${personality.greeting()}\n\nHow can I help you today?";
-    }
-
-    // ─────────────────────────────
-    // STUDY
-    // ─────────────────────────────
-
-    if (q.contains("study") ||
-        q.contains("recommend")) {
+    if (_mentions(question, _studyTerms)) {
       return adaptive.nextRecommendation();
     }
 
-    // ─────────────────────────────
-    // WEAK TOPICS
-    // ─────────────────────────────
-
-    if (q.contains("weak")) {
-      if (memory.weakTopics.isEmpty) {
-        return "I haven't identified your weak topics yet.";
-      }
-
-      return "Weak Topics:\n• ${memory.weakTopics.join("\n• ")}";
+    if (_mentions(question, _weakTerms)) {
+      return _topicListReply(
+        title: 'Weak topics',
+        topics: memory.weakTopics,
+        emptyMessage: 'I have not identified your weak topics yet.',
+      );
     }
 
-    // ─────────────────────────────
-    // STRONG TOPICS
-    // ─────────────────────────────
-
-    if (q.contains("strong")) {
-      if (memory.strongTopics.isEmpty) {
-        return "You haven't mastered any topics yet.";
-      }
-
-      return "Strong Topics:\n• ${memory.strongTopics.join("\n• ")}";
+    if (_mentions(question, _strongTerms)) {
+      return _topicListReply(
+        title: 'Strong topics',
+        topics: memory.strongTopics,
+        emptyMessage: 'You have not mastered any topics yet.',
+      );
     }
 
-    // ─────────────────────────────
-    // PROGRESS
-    // ─────────────────────────────
-
-    if (q.contains("progress")) {
-      return """
-Learning Level: ${memory.learningLevel()}
-
-Uploads: ${memory.profile.totalUploads}
-
-Questions: ${memory.profile.totalQuestions}
-
-Quizzes: ${memory.profile.quizzesCompleted}
-
-Study Minutes: ${memory.profile.studyMinutes}
-""";
+    if (_mentions(question, _progressTerms)) {
+      return _progressReply();
     }
 
-    // ─────────────────────────────
-    // PREDICTION
-    // ─────────────────────────────
-
-    if (q.contains("predict")) {
-      return prediction.predictions().join("\n");
+    if (_mentions(question, _predictTerms)) {
+      return prediction.predictions().join('\n');
     }
 
-    // ─────────────────────────────
-    // QUIZ
-    // ─────────────────────────────
-
-    if (q.contains("quiz")) {
-      final topic =
-          question.replaceAll(
-        RegExp("quiz", caseSensitive: false),
-        "",
-      ).trim();
-
-      final questions = quiz.generate(topic);
-
-      final buffer = StringBuffer();
-
-      buffer.writeln("📝 Quiz on $topic\n");
-
-      for (int i = 0; i < questions.length; i++) {
-        final quizQuestion = questions[i];
-
-        buffer.writeln(
-          "${i + 1}. ${quizQuestion["question"]}",
-        );
-
-        final options =
-            quizQuestion["options"] as List;
-
-        for (int j = 0; j < options.length; j++) {
-          buffer.writeln(
-            "   ${String.fromCharCode(65 + j)}. ${options[j]}",
-          );
-        }
-
-        buffer.writeln();
-      }
-
-      return buffer.toString();
+    if (_greetingPattern.hasMatch(question)) {
+      return '${personality.greeting()}\n\nHow can I help you today?';
     }
 
-    // ─────────────────────────────
-    // UNKNOWN QUESTION
-    // ─────────────────────────────
-
-    return """
-I don't know that topic yet.
-
-Try asking things like:
-
-• ANOVA
-• Regression
-• Python
-• Flutter
-• Photosynthesis
-• Newton's Laws
-• Epidemiology
-""";
+    return _fallbackReply;
   }
 
-  String _extractValue(
-    String text,
-    String label,
+  // Runs [action] on an analysed [document].
+  String respondToDocument(
+    DocumentAction action,
+    DocumentAnalysis document,
   ) {
-    final start = text.indexOf(label);
-
-    if (start == -1) {
-      return "Uploaded Document";
-    }
-
-    final value =
-        text.substring(start + label.length);
-
-    final end =
-        value.indexOf("\n");
-
-    if (end == -1) {
-      return value.trim();
-    }
-
-    return value.substring(0, end).trim();
-  }
-
-  String _extractDocumentText(String text) {
-    const marker = "Full document content:";
-
-    final start = text.indexOf(marker);
-
-    if (start == -1) {
-      return "";
-    }
-
-    return text
-        .substring(start + marker.length)
-        .trim();
+    return switch (action) {
+      DocumentAction.askAboutDocument => _askAboutDocument(document),
+      DocumentAction.generateQuiz => _quizFromDocument(document),
+      DocumentAction.generateQuestions => documents.generateQuestions(document),
+      DocumentAction.summarize => documents.summarize(document),
+      DocumentAction.importantTopics => documents.importantTopics(document),
+      DocumentAction.examPrediction => documents.examPrediction(document),
+      DocumentAction.studyPlan => documents.studyPlan(document),
+      DocumentAction.revisionNotes => documents.revisionNotes(document),
+    };
   }
 
   void observeQuestion(String question) {
@@ -321,5 +180,121 @@ Try asking things like:
 
   void observeStudySession(int minutes) {
     learning.observeStudySession(minutes);
+  }
+
+  bool _mentions(String text, List<String> terms) {
+    return TextMatcher.containsAny(text, terms);
+  }
+
+  String _quizReply(String question) {
+    var topics = knowledge.definitionsIn(question).keys.toList();
+
+    if (topics.isEmpty) {
+      topics = knowledge
+          .definitionsIn(memory.weakTopics.join(' '))
+          .keys
+          .toList();
+    }
+
+    final items = quiz.generateForTopics(topics);
+
+    if (items.isEmpty) {
+      return _quizGuidance;
+    }
+
+    final names = topics.map(knowledge.displayName).join(', ');
+
+    return quiz.render('Quiz on $names', items);
+  }
+
+  String _definitionReply(Map<String, String> definitions) {
+    final labelled = definitions.length > 1;
+    final buffer = StringBuffer('Answer\n');
+
+    for (final entry in definitions.entries.take(_maxDefinitions)) {
+      final label = labelled ? '${knowledge.displayName(entry.key)}: ' : '';
+
+      buffer.write('\n$label${entry.value}\n');
+    }
+
+    buffer
+      ..writeln()
+      ..writeln("Joseph's advice")
+      ..writeln('Understanding the idea is more important than memorising it.')
+      ..writeln()
+      ..write(
+        'To practise, ask me for a quiz, for example: '
+        'quiz ${definitions.keys.first}',
+      );
+
+    return buffer.toString();
+  }
+
+  String _topicListReply({
+    required String title,
+    required List<String> topics,
+    required String emptyMessage,
+  }) {
+    if (topics.isEmpty) {
+      return emptyMessage;
+    }
+
+    return [
+      '$title:',
+      ...topics.map((topic) => '- $topic'),
+    ].join('\n');
+  }
+
+  String _progressReply() {
+    final profile = memory.profile;
+
+    return [
+      'Learning level: ${memory.learningLevel()}',
+      'Uploads: ${profile.totalUploads}',
+      'Questions: ${profile.totalQuestions}',
+      'Quizzes: ${profile.quizzesCompleted}',
+      'Study minutes: ${profile.studyMinutes}',
+    ].join('\n');
+  }
+
+  String _askAboutDocument(DocumentAnalysis document) {
+    if (!document.hasText) {
+      return documents.summarize(document);
+    }
+
+    final topics = document.keywords
+        .where((keyword) => knowledge.definitionFor(keyword) != null)
+        .take(_maxDocumentTopics)
+        .toList();
+
+    if (topics.isEmpty) {
+      return 'I did not find topics in ${document.fileName} that I can '
+          'explain yet.\n\n'
+          'Try Important Topics or Revision Notes for an overview.';
+    }
+
+    return [
+      'Topics from ${document.fileName} that I can explain:',
+      '',
+      ...topics.map(
+        (topic) => '- ${knowledge.displayName(topic)}: '
+            '${knowledge.definitionFor(topic)}',
+      ),
+      '',
+      'Ask about any of them in the Joseph tab, or type "quiz <topic>" '
+          'for practice questions.',
+    ].join('\n');
+  }
+
+  String _quizFromDocument(DocumentAnalysis document) {
+    final items = quiz.generateForTopics(document.keywords);
+
+    if (items.isEmpty) {
+      return 'I could not build quiz questions from the topics found in '
+          '${document.fileName} yet.\n\n'
+          'Try Generate Questions or Revision Notes instead.';
+    }
+
+    return quiz.render('Quiz from ${document.fileName}', items);
   }
 }

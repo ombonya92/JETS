@@ -2,8 +2,182 @@ import 'dart:typed_data';
 
 import 'package:syncfusion_flutter_pdf/pdf.dart';
 
+import '../models/document_analysis.dart';
+import '../utils/text_matcher.dart';
+
 class DocumentService {
-  Future<Map<String, dynamic>> analyzePdf(
+  static const int _maxKeywords = 15;
+
+  static const int _previewLength = 600;
+
+  static final RegExp _whitespace = RegExp(r'\s+');
+
+  static const Map<String, List<String>> _subjectRules = {
+    'Mathematics': [
+      'algebra',
+      'calculus',
+      'equation',
+      'quadratic',
+      'matrix',
+      'geometry',
+      'trigonometry',
+      'statistics',
+      'probability',
+    ],
+    'Biology': [
+      'cell',
+      'mitosis',
+      'meiosis',
+      'genetics',
+      'photosynthesis',
+      'organism',
+      'ecosystem',
+      'dna',
+      'rna',
+    ],
+    'Chemistry': [
+      'atom',
+      'molecule',
+      'chemical',
+      'reaction',
+      'acid',
+      'base',
+      'organic chemistry',
+      'periodic table',
+    ],
+    'Physics': [
+      'force',
+      'velocity',
+      'acceleration',
+      'momentum',
+      'energy',
+      'motion',
+      'newton',
+      'electricity',
+      'wave',
+    ],
+    'Computer Science': [
+      'algorithm',
+      'programming',
+      'python',
+      'computer',
+      'database',
+      'software',
+      'network',
+      'data structure',
+    ],
+    'Medicine': [
+      'patient',
+      'diagnosis',
+      'disease',
+      'clinical',
+      'anatomy',
+      'physiology',
+      'pathology',
+      'treatment',
+    ],
+    'Nursing': [
+      'nursing',
+      'patient care',
+      'clinical',
+      'diagnosis',
+      'vital signs',
+      'medication',
+    ],
+    'Epidemiology': [
+      'epidemiology',
+      'incidence',
+      'prevalence',
+      'outbreak',
+      'surveillance',
+      'screening',
+      'risk factor',
+    ],
+    'Economics': [
+      'economics',
+      'demand',
+      'supply',
+      'inflation',
+      'market',
+      'gdp',
+      'unemployment',
+    ],
+    'Psychology': [
+      'psychology',
+      'behavior',
+      'cognition',
+      'memory',
+      'personality',
+      'learning',
+    ],
+    'History': [
+      'history',
+      'war',
+      'colonial',
+      'revolution',
+      'empire',
+      'civilization',
+    ],
+    'Geography': [
+      'geography',
+      'climate',
+      'population',
+      'map',
+      'environment',
+      'landform',
+    ],
+  };
+
+  static const List<String> _keywordVocabulary = [
+    'algebra',
+    'calculus',
+    'statistics',
+    'probability',
+    'regression',
+    'correlation',
+    'anova',
+    'hypothesis testing',
+    'cell',
+    'genetics',
+    'photosynthesis',
+    'mitosis',
+    'meiosis',
+    'atom',
+    'chemical reaction',
+    'acid',
+    'base',
+    'organic chemistry',
+    'force',
+    'velocity',
+    'acceleration',
+    'momentum',
+    'energy',
+    "newton's laws",
+    'programming',
+    'algorithm',
+    'python',
+    'database',
+    'anatomy',
+    'physiology',
+    'pathology',
+    'disease',
+    'diagnosis',
+    'epidemiology',
+    'incidence',
+    'prevalence',
+    'outbreak',
+    'screening',
+    'economics',
+    'supply',
+    'demand',
+    'inflation',
+    'psychology',
+    'behavior',
+    'history',
+    'geography',
+  ];
+
+  Future<DocumentAnalysis> analyzePdf(
     Uint8List bytes,
     String fileName,
   ) async {
@@ -11,270 +185,82 @@ class DocumentService {
 
     try {
       final pageCount = document.pages.count;
-
-      final extractedText = PdfTextExtractor(document).extractText();
-
-      final text = extractedText.trim();
-
+      final text = PdfTextExtractor(document).extractText().trim();
       final subjects = _detectSubjects(text);
       final keywords = _detectKeywords(text);
 
-      final summary = _createSummary(
+      return DocumentAnalysis(
         fileName: fileName,
-        text: text,
+        pageCount: pageCount,
         subjects: subjects,
         keywords: keywords,
+        summary: _createSummary(
+          fileName: fileName,
+          pageCount: pageCount,
+          text: text,
+          subjects: subjects,
+          keywords: keywords,
+        ),
+        text: text,
       );
-
-      return {
-        "fileName": fileName,
-        "pages": pageCount,
-        "subjects": subjects,
-        "keywords": keywords,
-        "summary": summary,
-        "text": text,
-      };
     } finally {
       document.dispose();
     }
   }
 
   List<String> _detectSubjects(String text) {
-    final lower = text.toLowerCase();
-
-    final subjectRules = <String, List<String>>{
-      "Mathematics": [
-        "algebra",
-        "calculus",
-        "equation",
-        "quadratic",
-        "matrix",
-        "geometry",
-        "trigonometry",
-        "statistics",
-        "probability",
-      ],
-      "Biology": [
-        "cell",
-        "mitosis",
-        "meiosis",
-        "genetics",
-        "photosynthesis",
-        "organism",
-        "ecosystem",
-        "dna",
-        "rna",
-      ],
-      "Chemistry": [
-        "atom",
-        "molecule",
-        "chemical",
-        "reaction",
-        "acid",
-        "base",
-        "organic chemistry",
-        "periodic table",
-      ],
-      "Physics": [
-        "force",
-        "velocity",
-        "acceleration",
-        "momentum",
-        "energy",
-        "motion",
-        "newton",
-        "electricity",
-        "wave",
-      ],
-      "Computer Science": [
-        "algorithm",
-        "programming",
-        "python",
-        "computer",
-        "database",
-        "software",
-        "network",
-        "data structure",
-      ],
-      "Medicine": [
-        "patient",
-        "diagnosis",
-        "disease",
-        "clinical",
-        "anatomy",
-        "physiology",
-        "pathology",
-        "treatment",
-      ],
-      "Nursing": [
-        "nursing",
-        "patient care",
-        "clinical",
-        "diagnosis",
-        "vital signs",
-        "medication",
-      ],
-      "Epidemiology": [
-        "epidemiology",
-        "incidence",
-        "prevalence",
-        "outbreak",
-        "surveillance",
-        "screening",
-        "risk factor",
-      ],
-      "Economics": [
-        "economics",
-        "demand",
-        "supply",
-        "inflation",
-        "market",
-        "gdp",
-        "unemployment",
-      ],
-      "Psychology": [
-        "psychology",
-        "behavior",
-        "cognition",
-        "memory",
-        "personality",
-        "learning",
-      ],
-      "History": [
-        "history",
-        "war",
-        "colonial",
-        "revolution",
-        "empire",
-        "civilization",
-      ],
-      "Geography": [
-        "geography",
-        "climate",
-        "population",
-        "map",
-        "environment",
-        "landform",
-      ],
-    };
-
-    final detected = <String>[];
-
-    for (final entry in subjectRules.entries) {
-      final matches = entry.value.where(
-        (keyword) => lower.contains(keyword),
-      );
-
-      if (matches.isNotEmpty) {
-        detected.add(entry.key);
-      }
-    }
+    final detected = [
+      for (final entry in _subjectRules.entries)
+        if (TextMatcher.containsAny(text, entry.value)) entry.key,
+    ];
 
     if (detected.isEmpty) {
-      return ["General Academics"];
+      return ['General Academics'];
     }
 
     return detected;
   }
 
   List<String> _detectKeywords(String text) {
-    final lower = text.toLowerCase();
-
-    final possibleKeywords = [
-      "algebra",
-      "calculus",
-      "statistics",
-      "probability",
-      "regression",
-      "correlation",
-      "anova",
-      "hypothesis testing",
-      "cell",
-      "genetics",
-      "photosynthesis",
-      "mitosis",
-      "meiosis",
-      "atom",
-      "chemical reaction",
-      "acid",
-      "base",
-      "organic chemistry",
-      "force",
-      "velocity",
-      "acceleration",
-      "momentum",
-      "energy",
-      "newton's laws",
-      "programming",
-      "algorithm",
-      "python",
-      "database",
-      "anatomy",
-      "physiology",
-      "pathology",
-      "disease",
-      "diagnosis",
-      "epidemiology",
-      "incidence",
-      "prevalence",
-      "outbreak",
-      "screening",
-      "economics",
-      "supply",
-      "demand",
-      "inflation",
-      "psychology",
-      "behavior",
-      "history",
-      "geography",
-    ];
-
-    final found = <String>[];
-
-    for (final keyword in possibleKeywords) {
-      if (lower.contains(keyword)) {
-        found.add(keyword);
-      }
-    }
-
-    return found.take(15).toList();
+    return TextMatcher.matchingTerms(text, _keywordVocabulary)
+        .take(_maxKeywords)
+        .toList();
   }
 
   String _createSummary({
     required String fileName,
+    required int pageCount,
     required String text,
     required List<String> subjects,
     required List<String> keywords,
   }) {
     if (text.isEmpty) {
-      return """
-Joseph received "$fileName", but no readable text was found.
-
-The PDF may contain scanned images rather than selectable text.
-""";
+      return 'Joseph received "$fileName", but no readable text was found.\n\n'
+          'The PDF may contain scanned images rather than selectable text.';
     }
 
-    final preview = text
-        .replaceAll(RegExp(r'\s+'), ' ')
-        .trim();
+    final preview = text.replaceAll(_whitespace, ' ').trim();
 
-    final shortened = preview.length > 600
-        ? "${preview.substring(0, 600)}..."
+    final shortened = preview.length > _previewLength
+        ? '${preview.substring(0, _previewLength)}...'
         : preview;
 
-    return """
-Joseph analysed "$fileName".
+    final pages = pageCount == 1 ? '1 page' : '$pageCount pages';
 
-Pages: The document contains ${subjects.length} detected academic area(s).
-
-Detected subject areas:
-${subjects.map((s) => "• $s").join("\n")}
-
-Detected topics:
-${keywords.isEmpty ? "No specific keywords detected yet." : keywords.map((k) => "• $k").join("\n")}
-
-Document preview:
-$shortened
-""";
+    return [
+      'Joseph analysed "$fileName" ($pages).',
+      '',
+      'Detected subject areas:',
+      ...subjects.map((subject) => '- $subject'),
+      '',
+      'Detected topics:',
+      if (keywords.isEmpty)
+        'No specific keywords detected yet.'
+      else
+        ...keywords.map((keyword) => '- $keyword'),
+      '',
+      'Document preview:',
+      shortened,
+    ].join('\n');
   }
 }

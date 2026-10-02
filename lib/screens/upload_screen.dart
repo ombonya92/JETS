@@ -1,7 +1,7 @@
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 
-import '../services/document_service.dart';
+import '../core/app_controller.dart';
 import 'analysis_screen.dart';
 
 class UploadScreen extends StatelessWidget {
@@ -17,55 +17,52 @@ class UploadScreen extends StatelessWidget {
         withData: true,
       );
 
-      if (result == null) return;
+      if (result == null) {
+        return;
+      }
 
       final pickedFile = result.files.single;
+      final bytes = pickedFile.bytes;
 
-      if (pickedFile.bytes == null) {
+      if (bytes == null) {
         messenger.showSnackBar(
           const SnackBar(
-            content: Text(
-              "JETS could not read this PDF.",
-            ),
+            content: Text('JETS could not read this PDF.'),
           ),
         );
         return;
       }
 
-      final documentService = DocumentService();
+      final controller = AppController.instance;
 
-      final analysis = await documentService.analyzePdf(
-        pickedFile.bytes!,
+      final analysis = await controller.documents.analyzePdf(
+        bytes,
         pickedFile.name,
       );
 
-      if (!context.mounted) return;
+      if (analysis.hasText) {
+        controller.intelligence.analyze(
+          fileName: analysis.fileName,
+          text: analysis.text,
+        );
+      }
+
+      if (!context.mounted) {
+        return;
+      }
 
       Navigator.push(
         context,
         MaterialPageRoute(
-          builder: (_) => AnalysisScreen(
-            fileName: analysis["fileName"],
-            pages: analysis["pages"],
-            subjects: List<String>.from(
-              analysis["subjects"],
-            ),
-            keywords: List<String>.from(
-              analysis["keywords"],
-            ),
-            summary: analysis["summary"],
-            documentText: analysis["text"] ?? "",
-          ),
+          builder: (_) => AnalysisScreen(document: analysis),
         ),
       );
-    } catch (e) {
-      if (!context.mounted) return;
+    } catch (error) {
+      debugPrint('PDF upload failed: $error');
 
       messenger.showSnackBar(
-        SnackBar(
-          content: Text(
-            "Upload failed. Please try again.\n$e",
-          ),
+        const SnackBar(
+          content: Text('Upload failed. Please try again.'),
         ),
       );
     }
@@ -75,7 +72,7 @@ class UploadScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text("Upload Notes"),
+        title: const Text('Upload Notes'),
       ),
       body: Center(
         child: Padding(
@@ -90,7 +87,7 @@ class UploadScreen extends StatelessWidget {
               ),
               const SizedBox(height: 25),
               const Text(
-                "Upload your notes or past paper",
+                'Upload your notes or past paper',
                 textAlign: TextAlign.center,
                 style: TextStyle(
                   fontSize: 22,
@@ -99,7 +96,8 @@ class UploadScreen extends StatelessWidget {
               ),
               const SizedBox(height: 15),
               const Text(
-                "Joseph will analyse the document and prepare learning resources.",
+                'Joseph will analyse the document and prepare learning '
+                'resources.',
                 textAlign: TextAlign.center,
               ),
               const SizedBox(height: 40),
@@ -108,7 +106,7 @@ class UploadScreen extends StatelessWidget {
                 child: ElevatedButton.icon(
                   onPressed: () => _pickFile(context),
                   icon: const Icon(Icons.upload_file),
-                  label: const Text("Choose PDF"),
+                  label: const Text('Choose PDF'),
                 ),
               ),
             ],

@@ -1,33 +1,30 @@
+import '../utils/text_matcher.dart';
 import 'joseph_memory.dart';
 import 'joseph_timeline_engine.dart';
 
 class JosephLearningEngine {
   final JosephMemory memory;
-final JosephTimelineEngine timeline;
+  final JosephTimelineEngine timeline;
 
-JosephLearningEngine(
-    this.memory,
-    this.timeline);
+  JosephLearningEngine(this.memory, this.timeline);
+
+  static const int _masteryScore = 80;
+
+  static const Map<String, String> _trackedTopics = {
+    'regression': 'Regression',
+    'anova': 'ANOVA',
+    'correlation': 'Correlation',
+    'hypothesis': 'Hypothesis Testing',
+  };
 
   void observeQuestion(String question) {
     memory.rememberQuestion(question);
+    timeline.askedQuestion(question);
 
-    final q = question.toLowerCase();
-
-    if (q.contains("regression")) {
-      memory.rememberWeakTopic("Regression");
-    }
-
-    if (q.contains("anova")) {
-      memory.rememberWeakTopic("ANOVA");
-    }
-
-    if (q.contains("correlation")) {
-      memory.rememberWeakTopic("Correlation");
-    }
-
-    if (q.contains("hypothesis")) {
-      memory.rememberWeakTopic("Hypothesis Testing");
+    for (final entry in _trackedTopics.entries) {
+      if (TextMatcher.containsTerm(question, entry.key)) {
+        _flagWeakTopic(entry.value);
+      }
     }
   }
 
@@ -36,8 +33,8 @@ JosephLearningEngine(
     required String fileName,
   }) {
     memory.rememberUpload(fileName);
-
     memory.rememberSubject(subject);
+    timeline.uploadedFile(fileName);
   }
 
   void observeQuiz({
@@ -45,15 +42,37 @@ JosephLearningEngine(
     required int score,
   }) {
     memory.profile.quizzesCompleted++;
+    timeline.completedQuiz(topic, score);
 
-    if (score >= 80) {
-      memory.rememberStrongTopic(topic);
+    if (score >= _masteryScore) {
+      _flagStrongTopic(topic);
     } else {
-      memory.rememberWeakTopic(topic);
+      _flagWeakTopic(topic);
     }
   }
 
   void observeStudySession(int minutes) {
     memory.profile.studyMinutes += minutes;
+    timeline.studySession(minutes);
+  }
+
+  void _flagWeakTopic(String topic) {
+    final isNew = !memory.weakTopics.contains(topic);
+
+    memory.rememberWeakTopic(topic);
+
+    if (isNew) {
+      timeline.detectedWeakTopic(topic);
+    }
+  }
+
+  void _flagStrongTopic(String topic) {
+    final isNew = !memory.strongTopics.contains(topic);
+
+    memory.rememberStrongTopic(topic);
+
+    if (isNew) {
+      timeline.detectedStrongTopic(topic);
+    }
   }
 }
