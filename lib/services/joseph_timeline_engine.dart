@@ -8,8 +8,7 @@ class JosephTimelineEngine {
 
   JosephTimelineEngine(this.memory);
 
-  List<LearningEvent> get events =>
-      List.unmodifiable(_events);
+  List<LearningEvent> get events => List.unmodifiable(_events);
 
   void record({
     required String title,
@@ -29,54 +28,49 @@ class JosephTimelineEngine {
 
   void uploadedFile(String file) {
     record(
-      title: "Uploaded Notes",
+      title: 'Uploaded Notes',
       description: file,
-      category: "Upload",
+      category: 'Upload',
     );
   }
 
   void askedQuestion(String question) {
     record(
-      title: "Asked Joseph",
+      title: 'Asked Joseph',
       description: question,
-      category: "Question",
+      category: 'Question',
     );
   }
 
-  void completedQuiz(
-    String topic,
-    int score,
-  ) {
+  void completedQuiz(String topic, int score) {
     record(
-      title: "Completed Quiz",
-      description:
-          "$topic • Score: $score%",
-      category: "Quiz",
+      title: 'Completed Quiz',
+      description: '$topic - Score: $score%',
+      category: 'Quiz',
     );
   }
 
   void detectedWeakTopic(String topic) {
     record(
-      title: "Weak Topic",
+      title: 'Weak Topic',
       description: topic,
-      category: "Learning",
+      category: 'Learning',
     );
   }
 
   void detectedStrongTopic(String topic) {
     record(
-      title: "Mastered Topic",
+      title: 'Mastered Topic',
       description: topic,
-      category: "Learning",
+      category: 'Learning',
     );
   }
 
   void studySession(int minutes) {
     record(
-      title: "Study Session",
-      description:
-          "$minutes minutes",
-      category: "Study",
+      title: 'Study Session',
+      description: '$minutes minutes',
+      category: 'Study',
     );
   }
 }

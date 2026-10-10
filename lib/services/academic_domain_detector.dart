@@ -1,4 +1,5 @@
 import '../models/academic_domain.dart';
+import '../utils/text_matcher.dart';
 
 class AcademicDomainDetector {
   const AcademicDomainDetector();
@@ -7,9 +8,7 @@ class AcademicDomainDetector {
     for (final domain in AcademicDomains.domains) {
       for (final subject in domain.subjects) {
         if (detectedTopics.any(
-          (topic) =>
-              topic.toLowerCase() ==
-              subject.toLowerCase(),
+          (topic) => topic.toLowerCase() == subject.toLowerCase(),
         )) {
           return domain;
         }
@@ -20,43 +19,22 @@ class AcademicDomainDetector {
   }
 
   List<AcademicDomain> detectDomains(String text) {
-    final lower = text.toLowerCase();
-
-    final List<AcademicDomain> matches = [];
-
-    for (final domain in AcademicDomains.domains) {
-      bool found = false;
-
-      for (final subject in domain.subjects) {
-        if (lower.contains(subject.toLowerCase())) {
-          found = true;
-          break;
-        }
-      }
-
-      if (found) {
-        matches.add(domain);
-      }
-    }
-
-    return matches;
+    return AcademicDomains.domains
+        .where((domain) => TextMatcher.containsAny(text, domain.subjects))
+        .toList();
   }
 
-  String detectDomainName(
-      List<String> detectedTopics) {
-    return detectDomain(detectedTopics)?.name ??
-        "General Academics";
+  String detectDomainName(List<String> detectedTopics) {
+    return detectDomain(detectedTopics)?.name ?? 'General Academics';
   }
 
-  List<String> relatedSubjects(
-      List<String> detectedTopics) {
-    final domain =
-        detectDomain(detectedTopics);
+  List<String> relatedSubjects(List<String> detectedTopics) {
+    final domain = detectDomain(detectedTopics);
 
     if (domain == null) {
       return [];
     }
 
-    return List.from(domain.subjects);
+    return List<String>.of(domain.subjects);
   }
 }

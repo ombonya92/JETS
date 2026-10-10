@@ -1,54 +1,82 @@
-
 import 'package:flutter/material.dart';
 
 import '../core/app_controller.dart';
+import '../models/document_action.dart';
+import '../models/document_analysis.dart';
+
+class _ActionSpec {
+  final IconData icon;
+  final String label;
+  final DocumentAction action;
+
+  const _ActionSpec(this.icon, this.label, this.action);
+}
 
 class AnalysisScreen extends StatelessWidget {
-  final String fileName;
-  final int pages;
-  final List<String> subjects;
-  final List<String> keywords;
-  final String summary;
-  final String documentText;
+  final DocumentAnalysis document;
 
-  const AnalysisScreen({
-    super.key,
-    required this.fileName,
-    required this.pages,
-    required this.subjects,
-    required this.keywords,
-    required this.summary,
-    required this.documentText,
-  });
+  const AnalysisScreen({super.key, required this.document});
 
-  void _askJoseph(
-    BuildContext context,
-    String command,
-  ) {
-    final controller = AppController();
+  static const List<_ActionSpec> _actions = [
+    _ActionSpec(
+      Icons.psychology,
+      'Ask Joseph About This',
+      DocumentAction.askAboutDocument,
+    ),
+    _ActionSpec(
+      Icons.quiz,
+      'Generate Quiz',
+      DocumentAction.generateQuiz,
+    ),
+    _ActionSpec(
+      Icons.help_outline,
+      'Generate Questions',
+      DocumentAction.generateQuestions,
+    ),
+    _ActionSpec(
+      Icons.summarize,
+      'Summarize Again',
+      DocumentAction.summarize,
+    ),
+    _ActionSpec(
+      Icons.topic,
+      'Important Topics',
+      DocumentAction.importantTopics,
+    ),
+    _ActionSpec(
+      Icons.auto_graph,
+      'Exam Prediction',
+      DocumentAction.examPrediction,
+    ),
+    _ActionSpec(
+      Icons.schedule,
+      'Create Study Plan',
+      DocumentAction.studyPlan,
+    ),
+    _ActionSpec(
+      Icons.menu_book,
+      'Revision Notes',
+      DocumentAction.revisionNotes,
+    ),
+  ];
 
-    final response = controller.cognitive.respond(
-      "$command\n\n"
-      "Uploaded document: $fileName\n"
-      "Detected subjects: ${subjects.join(", ")}\n"
-      "Detected topics: ${keywords.join(", ")}\n"
-      "Document analysis:\n$summary\n\n"
-      "Full document content:\n$documentText",
+  void _runAction(BuildContext context, DocumentAction action) {
+    final response = AppController.instance.cognitive.respondToDocument(
+      action,
+      document,
     );
 
-    showDialog(
+    showDialog<void>(
       context: context,
-      builder: (_) => AlertDialog(
-        title: const Text("Joseph"),
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('Joseph'),
         content: SingleChildScrollView(
           child: Text(response),
         ),
         actions: [
           TextButton(
-            onPressed: () {
-              Navigator.pop(context);
-            },
-            child: const Text("OK"),
+            onPressed: () => Navigator.pop(dialogContext),
+            child: const Text('OK'),
           ),
         ],
       ),
@@ -59,66 +87,57 @@ class AnalysisScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text("Joseph Analysis"),
+        title: const Text('Joseph Analysis'),
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(20),
         child: Column(
-          crossAxisAlignment:
-              CrossAxisAlignment.start,
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             const Icon(
               Icons.description,
               size: 70,
               color: Colors.blue,
             ),
-
             const SizedBox(height: 20),
-
             Text(
-              fileName,
+              document.fileName,
               style: const TextStyle(
                 fontSize: 22,
                 fontWeight: FontWeight.bold,
               ),
             ),
-
             const SizedBox(height: 25),
-
             Card(
               child: ListTile(
                 leading: const Icon(Icons.menu_book),
-                title: const Text("Pages"),
-                trailing: Text("$pages"),
+                title: const Text('Pages'),
+                trailing: Text('${document.pageCount}'),
               ),
             ),
-
             Card(
               child: ListTile(
                 leading: const Icon(Icons.school),
-                title: const Text("Subjects"),
+                title: const Text('Subjects'),
                 subtitle: Text(
-                  subjects.isEmpty
-                      ? "None detected"
-                      : subjects.join(", "),
+                  document.subjects.isEmpty
+                      ? 'None detected'
+                      : document.subjects.join(', '),
                 ),
               ),
             ),
-
             Card(
               child: ListTile(
                 leading: const Icon(Icons.topic),
-                title: const Text("Keywords"),
+                title: const Text('Keywords'),
                 subtitle: Text(
-                  keywords.isEmpty
-                      ? "None detected"
-                      : keywords.join(", "),
+                  document.keywords.isEmpty
+                      ? 'None detected'
+                      : document.keywords.join(', '),
                 ),
               ),
             ),
-
             const SizedBox(height: 25),
-
             const Text(
               "Joseph's Summary",
               style: TextStyle(
@@ -126,95 +145,30 @@ class AnalysisScreen extends StatelessWidget {
                 fontSize: 20,
               ),
             ),
-
             const SizedBox(height: 10),
-
             Card(
               child: Padding(
                 padding: const EdgeInsets.all(16),
-                child: Text(summary),
+                child: Text(document.summary),
               ),
             ),
-
             const SizedBox(height: 30),
-
-            _actionButton(
-              context,
-              Icons.psychology,
-              "Ask Joseph About This",
-              "Answer questions about this uploaded document.",
-            ),
-
-            _actionButton(
-              context,
-              Icons.quiz,
-              "Generate Quiz",
-              "Generate a quiz from this uploaded document.",
-            ),
-
-            _actionButton(
-              context,
-              Icons.help_outline,
-              "Generate Questions",
-              "Generate important study questions from this uploaded document.",
-            ),
-
-            _actionButton(
-              context,
-              Icons.summarize,
-              "Summarize Again",
-              "Give me a clear summary of this uploaded document.",
-            ),
-
-            _actionButton(
-              context,
-              Icons.topic,
-              "Important Topics",
-              "Identify the most important topics in this uploaded document.",
-            ),
-
-            _actionButton(
-              context,
-              Icons.auto_graph,
-              "Exam Prediction",
-              "Identify possible exam questions based on this uploaded document.",
-            ),
-
-            _actionButton(
-              context,
-              Icons.schedule,
-              "Create Study Plan",
-              "Create a study plan based on this uploaded document.",
-            ),
-
-            _actionButton(
-              context,
-              Icons.menu_book,
-              "Revision Notes",
-              "Create revision notes from this uploaded document.",
-            ),
+            for (final spec in _actions) _actionButton(context, spec),
           ],
         ),
       ),
     );
   }
 
-  Widget _actionButton(
-    BuildContext context,
-    IconData icon,
-    String title,
-    String command,
-  ) {
+  Widget _actionButton(BuildContext context, _ActionSpec spec) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 15),
       child: SizedBox(
         width: double.infinity,
         child: ElevatedButton.icon(
-          icon: Icon(icon),
-          label: Text(title),
-          onPressed: () {
-            _askJoseph(context, command);
-          },
+          icon: Icon(spec.icon),
+          label: Text(spec.label),
+          onPressed: () => _runAction(context, spec.action),
         ),
       ),
     );
