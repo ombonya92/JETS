@@ -19,35 +19,28 @@ class JosephLearningEngine {
 
   void observeQuestion(String question) {
     memory.rememberQuestion(question);
-    timeline.askedQuestion(question);
 
     for (final entry in _trackedTopics.entries) {
       if (TextMatcher.containsTerm(question, entry.key)) {
-        _flagWeakTopic(entry.value);
+        _markWeak(entry.value);
       }
     }
   }
 
-  void observeUpload({
-    required String subject,
-    required String fileName,
-  }) {
+  void observeUpload({required String subject, required String fileName}) {
     memory.rememberUpload(fileName);
     memory.rememberSubject(subject);
-    timeline.uploadedFile(fileName);
+    timeline.uploadedFile(fileName, subject);
   }
 
-  void observeQuiz({
-    required String topic,
-    required int score,
-  }) {
+  void observeQuiz({required String topic, required int score}) {
     memory.profile.quizzesCompleted++;
     timeline.completedQuiz(topic, score);
 
     if (score >= _masteryScore) {
-      _flagStrongTopic(topic);
+      _markStrong(topic);
     } else {
-      _flagWeakTopic(topic);
+      _markWeak(topic);
     }
   }
 
@@ -56,23 +49,13 @@ class JosephLearningEngine {
     timeline.studySession(minutes);
   }
 
-  void _flagWeakTopic(String topic) {
-    final isNew = !memory.weakTopics.contains(topic);
-
+  void _markWeak(String topic) {
+    if (memory.weakTopics.contains(topic)) return;
     memory.rememberWeakTopic(topic);
-
-    if (isNew) {
-      timeline.detectedWeakTopic(topic);
-    }
   }
 
-  void _flagStrongTopic(String topic) {
-    final isNew = !memory.strongTopics.contains(topic);
-
+  void _markStrong(String topic) {
+    if (memory.strongTopics.contains(topic)) return;
     memory.rememberStrongTopic(topic);
-
-    if (isNew) {
-      timeline.detectedStrongTopic(topic);
-    }
   }
 }
