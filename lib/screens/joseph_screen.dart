@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../core/app_controller.dart';
+import '../state/app_state.dart';
 
 class JosephScreen extends StatefulWidget {
   const JosephScreen({super.key});
@@ -10,351 +11,152 @@ class JosephScreen extends StatefulWidget {
 }
 
 class _JosephScreenState extends State<JosephScreen> {
-  final AppController controller = AppController();
+  final TextEditingController _input = TextEditingController();
 
-  final TextEditingController questionController =
-      TextEditingController();
+  void _ask() {
+    final question = _input.text.trim();
+    if (question.isEmpty) return;
 
-  void _askJoseph() {
-    final question = questionController.text.trim();
+    final reply = AppController.instance.cognitive.respond(question);
+    _input.clear();
 
-    if (question.isEmpty) {
-      return;
-    }
-
-    final reply = controller.cognitive.respond(question);
-
-    questionController.clear();
-
-    showDialog(
+    showDialog<void>(
       context: context,
-      builder: (_) => AlertDialog(
-        title: const Text("Joseph"),
-        content: SingleChildScrollView(
-          child: Text(reply),
-        ),
+      builder: (ctx) => AlertDialog(
+        title: const Text('Joseph'),
+        content: SingleChildScrollView(child: Text(reply)),
         actions: [
           TextButton(
-            onPressed: () {
-              Navigator.pop(context);
-            },
-            child: const Text("OK"),
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('OK'),
           ),
         ],
       ),
     );
+  }
 
-    setState(() {});
+  @override
+  void dispose() {
+    _input.dispose();
+    super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
+    return ListenableBuilder(
+      listenable: AppController.instance.state,
+      builder: (context, _) {
+        final state = AppController.instance.state;
+        return _JosephView(
+          state: state,
+          input: _input,
+          onAsk: _ask,
+        );
+      },
+    );
+  }
+}
+
+class _JosephView extends StatelessWidget {
+  final AppState state;
+  final TextEditingController input;
+  final VoidCallback onAsk;
+
+  const _JosephView({
+    required this.state,
+    required this.input,
+    required this.onAsk,
+  });
+
+  static const List<_Chip> _chips = [
+    _Chip(Icons.quiz, 'quiz anova'),
+    _Chip(Icons.summarize, 'Summarize Notes'),
+    _Chip(Icons.menu_book, 'Study Plan'),
+    _Chip(Icons.analytics, 'my progress'),
+    _Chip(Icons.auto_graph, 'my weak topics'),
+    _Chip(Icons.psychology_alt, 'my strong topics'),
+  ];
+
+  @override
+  Widget build(BuildContext context) {
+    final controller = AppController.instance;
     final brain = controller.cognitive.think();
 
     return Scaffold(
       backgroundColor: const Color(0xffF5F7FB),
-
       appBar: AppBar(
         elevation: 0,
         backgroundColor: Colors.transparent,
         foregroundColor: Colors.black,
         title: const Text(
-          "Joseph AI",
-          style: TextStyle(
-            fontWeight: FontWeight.bold,
-          ),
+          'Joseph AI',
+          style: TextStyle(fontWeight: FontWeight.bold),
         ),
       ),
-
       body: SafeArea(
         child: Column(
           children: [
-            Container(
-              margin: const EdgeInsets.all(18),
-              padding: const EdgeInsets.all(22),
-              decoration: BoxDecoration(
-                color: Colors.blue,
-                borderRadius: BorderRadius.circular(20),
-              ),
-              child: Row(
-                children: [
-                  const CircleAvatar(
-                    radius: 30,
-                    backgroundColor: Colors.white,
-                    child: Icon(
-                      Icons.smart_toy,
-                      color: Colors.blue,
-                      size: 34,
-                    ),
-                  ),
-
-                  const SizedBox(width: 16),
-
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment:
-                          CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          brain["greeting"]?.toString() ??
-                              "Hello!",
-                          style: const TextStyle(
-                            color: Colors.white,
-                            fontSize: 20,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-
-                        const SizedBox(height: 6),
-
-                        Text(
-                          brain["insight"]?.toString() ??
-                              "I'm ready to help you study.",
-                          style: const TextStyle(
-                            color: Colors.white,
-                            fontSize: 15,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
-            ),
-
+            _header(brain),
             Expanded(
               child: ListView(
-                padding:
-                    const EdgeInsets.symmetric(
-                  horizontal: 18,
-                ),
+                padding: const EdgeInsets.symmetric(horizontal: 18),
                 children: [
-                  Card(
-                    elevation: 3,
-                    shape:
-                        RoundedRectangleBorder(
-                      borderRadius:
-                          BorderRadius.circular(18),
-                    ),
-                    child: Padding(
-                      padding:
-                          const EdgeInsets.all(20),
-                      child: Column(
-                        crossAxisAlignment:
-                            CrossAxisAlignment.start,
-                        children: [
-                          const Text(
-                            "Learning Status",
-                            style: TextStyle(
-                              fontWeight:
-                                  FontWeight.bold,
-                              fontSize: 20,
-                            ),
-                          ),
-
-                          const SizedBox(height: 20),
-
-                          Row(
-                            children: [
-                              Expanded(
-                                child: _statCard(
-                                  "Level",
-                                  brain["learningLevel"]
-                                          ?.toString() ??
-                                      "Learning You",
-                                  Icons.school,
-                                ),
-                              ),
-
-                              const SizedBox(width: 15),
-
-                              Expanded(
-                                child: _statCard(
-                                  "Confidence",
-                                  "${brain["confidence"]?.toStringAsFixed(0) ?? "0"}%",
-                                  Icons.psychology,
-                                ),
-                              ),
-                            ],
-                          ),
-
-                          const SizedBox(height: 25),
-
-                          const Text(
-                            "Joseph's Assessment",
-                            style: TextStyle(
-                              fontWeight:
-                                  FontWeight.bold,
-                              fontSize: 18,
-                            ),
-                          ),
-
-                          const SizedBox(height: 12),
-
-                          Text(
-                            brain["insight"]?.toString() ??
-                                "Continue studying and asking questions.",
-                            style: const TextStyle(
-                              fontSize: 15,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-
+                  _statusCard(state, brain),
                   const SizedBox(height: 20),
-
                   const Text(
-                    "Quick Actions",
+                    'Quick Actions',
                     style: TextStyle(
                       fontSize: 20,
                       fontWeight: FontWeight.bold,
                     ),
                   ),
-
                   const SizedBox(height: 15),
-
-                  Wrap(
-                    spacing: 12,
-                    runSpacing: 12,
-                    children: [
-                      _actionChip(
-                        Icons.quiz,
-                        "Generate Quiz",
-                      ),
-
-                      _actionChip(
-                        Icons.summarize,
-                        "Summarize Notes",
-                      ),
-
-                      _actionChip(
-                        Icons.menu_book,
-                        "Study Plan",
-                      ),
-
-                      _actionChip(
-                        Icons.analytics,
-                        "Analyze Notes",
-                      ),
-
-                      _actionChip(
-                        Icons.auto_graph,
-                        "Track Progress",
-                      ),
-
-                      _actionChip(
-                        Icons.psychology_alt,
-                        "AI Revision",
-                      ),
-                    ],
-                  ),
-
-                  const SizedBox(height: 30),
-
-                  Container(
-                    padding:
-                        const EdgeInsets.all(15),
-                    decoration:
-                        const BoxDecoration(
-                      color: Colors.white,
-                    ),
-                    child: Row(
-                      children: [
-                        Expanded(
-                          child: TextField(
-                            controller:
-                                questionController,
-                            onSubmitted: (_) =>
-                                _askJoseph(),
-                            decoration:
-                                InputDecoration(
-                              hintText:
-                                  "Ask Joseph anything.",
-                              filled: true,
-                              fillColor:
-                                  Colors.grey.shade100,
-                              border:
-                                  OutlineInputBorder(
-                                borderRadius:
-                                    BorderRadius.circular(
-                                        30),
-                                borderSide:
-                                    BorderSide.none,
-                              ),
-                            ),
-                          ),
-                        ),
-
-                        const SizedBox(width: 10),
-
-                        FloatingActionButton(
-                          heroTag:
-                              "sendJoseph",
-                          mini: true,
-                          backgroundColor:
-                              Colors.blue,
-                          onPressed: _askJoseph,
-                          child: const Icon(
-                            Icons.send,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-
+                  _chipRow(context),
                   const SizedBox(height: 30),
                 ],
               ),
             ),
+            _inputBar(context),
           ],
         ),
       ),
     );
   }
 
-  Widget _statCard(
-    String title,
-    String value,
-    IconData icon,
-  ) {
+  Widget _header(Map<String, dynamic> brain) {
     return Container(
-      padding:
-          const EdgeInsets.symmetric(
-        vertical: 18,
-        horizontal: 15,
-      ),
+      margin: const EdgeInsets.all(18),
+      padding: const EdgeInsets.all(22),
       decoration: BoxDecoration(
-        color: Colors.blue.shade50,
-        borderRadius:
-            BorderRadius.circular(16),
+        color: Colors.blue,
+        borderRadius: BorderRadius.circular(20),
       ),
-      child: Column(
+      child: Row(
         children: [
-          Icon(
-            icon,
-            color: Colors.blue,
-            size: 30,
+          const CircleAvatar(
+            radius: 30,
+            backgroundColor: Colors.white,
+            child: Icon(Icons.smart_toy, color: Colors.blue, size: 34),
           ),
-
-          const SizedBox(height: 10),
-
-          Text(
-            value,
-            style: const TextStyle(
-              fontWeight: FontWeight.bold,
-              fontSize: 18,
-            ),
-            textAlign: TextAlign.center,
-          ),
-
-          const SizedBox(height: 5),
-
-          Text(
-            title,
-            style: const TextStyle(
-              color: Colors.grey,
+          const SizedBox(width: 16),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  brain['greeting']?.toString() ?? 'Hello!',
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                const SizedBox(height: 6),
+                Text(
+                  brain['insight']?.toString() ?? '',
+                  style: const TextStyle(color: Colors.white, fontSize: 14),
+                ),
+              ],
             ),
           ),
         ],
@@ -362,27 +164,192 @@ class _JosephScreenState extends State<JosephScreen> {
     );
   }
 
-  Widget _actionChip(
-    IconData icon,
-    String text,
-  ) {
-    return ActionChip(
-      avatar: Icon(
-        icon,
-        size: 18,
-        color: Colors.blue,
+  Widget _statusCard(AppState state, Map<String, dynamic> brain) {
+    return Card(
+      elevation: 3,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
+      child: Padding(
+        padding: const EdgeInsets.all(20),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+              'Learning Status',
+              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 20),
+            ),
+            const SizedBox(height: 20),
+            Row(
+              children: [
+                Expanded(
+                  child: _statBox(
+                    'Level',
+                    brain['learningLevel']?.toString() ?? '',
+                    Icons.school,
+                  ),
+                ),
+                const SizedBox(width: 15),
+                Expanded(
+                  child: _statBox(
+                    'Confidence',
+                    '${brain['confidence']?.toStringAsFixed(0) ?? '0'}%',
+                    Icons.psychology,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 20),
+            Row(
+              children: [
+                Expanded(
+                  child: _statBox(
+                    'Uploads',
+                    '${state.progress.totalUploads}',
+                    Icons.upload_file,
+                  ),
+                ),
+                const SizedBox(width: 15),
+                Expanded(
+                  child: _statBox(
+                    'Questions',
+                    '${state.progress.totalQuestions}',
+                    Icons.help_outline,
+                  ),
+                ),
+              ],
+            ),
+            if (state.progress.weakTopics.isNotEmpty) ...[
+              const SizedBox(height: 20),
+              const Text(
+                'Needs Work',
+                style: TextStyle(fontWeight: FontWeight.bold),
+              ),
+              const SizedBox(height: 8),
+              Wrap(
+                spacing: 8,
+                runSpacing: 6,
+                children: state.progress.weakTopics
+                    .map(
+                      (t) => Chip(
+                        label: Text(t),
+                        backgroundColor: Colors.red.shade50,
+                        side: BorderSide(color: Colors.red.shade200),
+                      ),
+                    )
+                    .toList(),
+              ),
+            ],
+            if (state.progress.strongTopics.isNotEmpty) ...[
+              const SizedBox(height: 16),
+              const Text(
+                'Mastered',
+                style: TextStyle(fontWeight: FontWeight.bold),
+              ),
+              const SizedBox(height: 8),
+              Wrap(
+                spacing: 8,
+                runSpacing: 6,
+                children: state.progress.strongTopics
+                    .map(
+                      (t) => Chip(
+                        label: Text(t),
+                        backgroundColor: Colors.green.shade50,
+                        side: BorderSide(color: Colors.green.shade200),
+                      ),
+                    )
+                    .toList(),
+              ),
+            ],
+          ],
+        ),
       ),
-      label: Text(text),
+    );
+  }
+
+  Widget _statBox(String label, String value, IconData icon) {
+    return Container(
+      padding: const EdgeInsets.symmetric(vertical: 18, horizontal: 15),
+      decoration: BoxDecoration(
+        color: Colors.blue.shade50,
+        borderRadius: BorderRadius.circular(16),
+      ),
+      child: Column(
+        children: [
+          Icon(icon, color: Colors.blue, size: 28),
+          const SizedBox(height: 10),
+          Text(
+            value,
+            style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+            textAlign: TextAlign.center,
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
+          ),
+          const SizedBox(height: 5),
+          Text(label, style: const TextStyle(color: Colors.grey, fontSize: 12)),
+        ],
+      ),
+    );
+  }
+
+  Widget _chipRow(BuildContext context) {
+    return Wrap(
+      spacing: 12,
+      runSpacing: 12,
+      children: _chips.map((chip) => _actionChip(context, chip)).toList(),
+    );
+  }
+
+  Widget _actionChip(BuildContext context, _Chip chip) {
+    return ActionChip(
+      avatar: Icon(chip.icon, size: 18, color: Colors.blue),
+      label: Text(chip.label),
       onPressed: () {
-        questionController.text = text;
-        _askJoseph();
+        input.text = chip.label;
+        onAsk();
       },
     );
   }
 
-  @override
-  void dispose() {
-    questionController.dispose();
-    super.dispose();
+  Widget _inputBar(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
+      color: Colors.white,
+      child: Row(
+        children: [
+          Expanded(
+            child: TextField(
+              controller: input,
+              onSubmitted: (_) => onAsk(),
+              decoration: InputDecoration(
+                hintText: 'Ask Joseph anything.',
+                filled: true,
+                fillColor: Colors.grey.shade100,
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(30),
+                  borderSide: BorderSide.none,
+                ),
+                contentPadding: const EdgeInsets.symmetric(
+                  horizontal: 20,
+                  vertical: 14,
+                ),
+              ),
+            ),
+          ),
+          const SizedBox(width: 10),
+          FloatingActionButton(
+            heroTag: 'sendJoseph',
+            mini: true,
+            backgroundColor: Colors.blue,
+            onPressed: onAsk,
+            child: const Icon(Icons.send, color: Colors.white),
+          ),
+        ],
+      ),
+    );
   }
+}
+
+class _Chip {
+  final IconData icon;
+  final String label;
+  const _Chip(this.icon, this.label);
 }
