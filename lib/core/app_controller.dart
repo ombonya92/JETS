@@ -12,7 +12,8 @@ import '../services/joseph_service.dart';
 import '../services/joseph_timeline_engine.dart';
 import '../services/personality_engine.dart';
 import '../services/prediction_engine.dart';
-import '../services/topic_detector.dart'; 
+import '../services/topic_detector.dart';
+import '../state/app_state.dart';
 
 class AppController {
   static final AppController instance = AppController._internal();
@@ -20,6 +21,8 @@ class AppController {
   factory AppController() => instance;
 
   AppController._internal();
+
+  final AppState state = AppState();
 
   final JosephMemory memory = JosephMemory();
 
@@ -32,7 +35,7 @@ class AppController {
   late final AcademicDomainDetector domainDetector =
       const AcademicDomainDetector();
 
-  late final JosephTimelineEngine timeline = JosephTimelineEngine(memory);
+  late final JosephTimelineEngine timeline = JosephTimelineEngine(state);
 
   late final JosephLearningEngine learning =
       JosephLearningEngine(memory, timeline);
@@ -42,10 +45,7 @@ class AppController {
   late final PredictionEngine prediction = PredictionEngine(memory);
 
   late final JosephRecommendationEngine recommendation =
-      JosephRecommendationEngine(
-    memory: memory,
-    graph: knowledgeGraph,
-  );
+      JosephRecommendationEngine(memory: memory, graph: knowledgeGraph);
 
   late final PersonalityEngine personality = PersonalityEngine(memory);
 
@@ -68,4 +68,9 @@ class AppController {
     reasoning: reasoning,
     learning: learning,
   );
+
+  Future<void> init() async {
+    await state.load();
+    memory.attach(state);
+  }
 }
