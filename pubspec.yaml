@@ -1,4 +1,3 @@
-
 name: jets
 description: "A new Flutter project."
 publish_to: 'none'
@@ -17,6 +16,7 @@ dependencies:
   file_picker: ^10.3.2
   syncfusion_flutter_pdf: ^31.1.20
   syncfusion_flutter_pdfviewer: ^31.1.20
+  shared_preferences: ^2.3.2
 
 dev_dependencies:
   flutter_test:
