@@ -1,202 +1,72 @@
 import '../models/joseph_brain.dart';
-import '../models/joseph_learning_profile.dart';
 import '../models/student_knowledge.dart';
+import '../models/student_progress.dart';
+import '../state/app_state.dart';
 
 class JosephMemory {
-  static final JosephMemory instance =
-      JosephMemory._internal();
+  static final JosephMemory instance = JosephMemory._internal();
 
   factory JosephMemory() => instance;
 
   JosephMemory._internal();
 
-  // -----------------------------
-  // Brain
-  // -----------------------------
+  AppState? _state;
 
-  final JosephBrain brain = JosephBrain(
-    studentName: "Hanley",
-  );
+  final JosephBrain brain = JosephBrain(studentName: 'Hanley');
 
-  // -----------------------------
-  // Learning Profile
-  // -----------------------------
+  final StudentKnowledge knowledge = StudentKnowledge();
 
-  final JosephLearningProfile profile =
-      JosephLearningProfile();
+  void attach(AppState state) {
+    _state = state;
+  }
 
-  // -----------------------------
-  // Student Knowledge Model
-  // -----------------------------
+  StudentProgress get profile {
+    assert(_state != null, 'JosephMemory.attach() must be called before use.');
+    return _state!.progress;
+  }
 
-  final StudentKnowledge knowledge =
-      StudentKnowledge();
+  List<String> get weakTopics => profile.weakTopics;
 
-  // -----------------------------
-  // Memory Collections
-  // -----------------------------
+  List<String> get strongTopics => profile.strongTopics;
 
-  final List<String> previousQuestions = [];
+  List<String> get uploadedFiles => profile.uploadedFiles;
 
-  final List<String> uploadedFiles = [];
-
-  final List<String> subjects = [];
-
-  final List<String> weakTopics = [];
-
-  final List<String> strongTopics = [];
-
-  // -----------------------------
-  // Remember Question
-  // -----------------------------
+  List<String> get subjects => profile.subjects;
 
   void rememberQuestion(String question) {
-    previousQuestions.add(question);
-
-    profile.totalQuestions++;
-
+    _state?.recordQuestion(question);
     brain.questionsAsked++;
-
-    brain.addActivity(
-      "Question asked: $question",
-    );
+    brain.addActivity('Question: $question');
   }
-
-  // -----------------------------
-  // Remember Upload
-  // -----------------------------
 
   void rememberUpload(String file) {
-    uploadedFiles.add(file);
-
-    profile.totalUploads++;
-
     brain.uploadedDocuments++;
-
-    brain.addActivity(
-      "Uploaded $file",
-    );
+    brain.addActivity('Uploaded: $file');
   }
 
-  // -----------------------------
-  // Remember Subject
-  // -----------------------------
-
   void rememberSubject(String subject) {
-    if (!subjects.contains(subject)) {
-      subjects.add(subject);
-    }
-
-    profile.favoriteSubject = subject;
-
     brain.topicFrequency.update(
       subject,
-      (value) => value + 1,
+      (v) => v + 1,
       ifAbsent: () => 1,
     );
   }
 
-  // -----------------------------
-  // Weak Topic
-  // -----------------------------
-
- void rememberWeakTopic(String topic) {
-  if (!weakTopics.contains(topic)) {
-    weakTopics.add(topic);
+  void rememberWeakTopic(String topic) {
+    _state?.recordWeakTopic(topic);
+    knowledge.decrease(topic, 5);
+    brain.topicConfidence[topic] = knowledge.confidenceOf(topic);
+    brain.addActivity('Weak topic: $topic');
   }
-
-  strongTopics.remove(topic);
-
-  if (!brain.weakTopics.contains(topic)) {
-    brain.weakTopics.add(topic);
-  }
-
-  brain.strongTopics.remove(topic);
-
-  knowledge.decrease(topic, 5);
-
-  brain.topicConfidence[topic] =
-      knowledge.confidenceOf(topic);
-
-  brain.addActivity(
-    "Weak topic detected: $topic",
-  );
-}
-
-  // -----------------------------
-  // Strong Topic
-  // -----------------------------
 
   void rememberStrongTopic(String topic) {
-  if (!strongTopics.contains(topic)) {
-    strongTopics.add(topic);
+    _state?.recordStrongTopic(topic);
+    knowledge.increase(topic, 5);
+    brain.topicConfidence[topic] = knowledge.confidenceOf(topic);
+    brain.addActivity('Mastered: $topic');
   }
-
-  weakTopics.remove(topic);
-
-  if (!brain.strongTopics.contains(topic)) {
-    brain.strongTopics.add(topic);
-  }
-
-  brain.weakTopics.remove(topic);
-
-  knowledge.increase(topic, 5);
-
-  brain.topicConfidence[topic] =
-      knowledge.confidenceOf(topic);
-
-  brain.addActivity(
-    "Mastered topic: $topic",
-  );
-}
-
-  // -----------------------------
-  // Quiz Completed
-  // -----------------------------
-
-  void completeQuiz() {
-    profile.quizzesCompleted++;
-
-    brain.quizzesGenerated++;
-  }
-
-  // -----------------------------
-  // Study Session
-  // -----------------------------
-
-  void study(int minutes) {
-    profile.studyMinutes += minutes;
-
-    brain.studyMinutes += minutes;
-  }
-
-  // -----------------------------
-  // Joseph Learning Level
-  // -----------------------------
 
   String learningLevel() {
-
-    final interactions =
-        profile.totalUploads +
-        profile.totalQuestions +
-        profile.quizzesCompleted;
-
-    if (interactions < 10) {
-      return "Learning You";
-    }
-
-    if (interactions < 40) {
-      return "Understanding You";
-    }
-
-    if (interactions < 80) {
-      return "Adapting";
-    }
-
-    if (interactions < 150) {
-      return "Academic Mentor";
-    }
-
-    return "Personal Tutor";
+    return _state?.learningLevel() ?? 'Learning You';
   }
 }

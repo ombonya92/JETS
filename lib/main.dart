@@ -1,20 +1,26 @@
 import 'package:flutter/material.dart';
-import 'screens/main/main_screens.dart';
-import 'theme/app_theme.dart';
 
-void main() {
-  runApp(const JETSApp());
+import 'core/app_controller.dart';
+import 'screens/main/main_screens.dart';
+
+Future<void> main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  await AppController.instance.init();
+  runApp(const JetsApp());
 }
 
-class JETSApp extends StatelessWidget {
-  const JETSApp({super.key});
+class JetsApp extends StatelessWidget {
+  const JetsApp({super.key});
 
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      debugShowCheckedModeBanner: false,
       title: 'JETS',
-      theme: AppTheme.lightTheme,
+      debugShowCheckedModeBanner: false,
+      theme: ThemeData(
+        colorSchemeSeed: Colors.blue,
+        useMaterial3: true,
+      ),
       home: const MainScreens(),
     );
   }

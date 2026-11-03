@@ -1,43 +1,46 @@
 import 'package:flutter/material.dart';
 
+import '../core/app_controller.dart';
+import '../models/timeline_event.dart';
+
 class TimelineScreen extends StatelessWidget {
   const TimelineScreen({super.key});
 
   @override
   Widget build(BuildContext context) {
-    final events = [
-      {
-        "title": "Medical Biostatistics Revision",
-        "subtitle": "Today • 7:00 PM",
-        "icon": Icons.menu_book,
-        "color": Colors.blue,
+    return ListenableBuilder(
+      listenable: AppController.instance.state,
+      builder: (context, _) {
+        final events = AppController.instance.state.timeline;
+        return _TimelineView(events: events);
       },
-      {
-        "title": "Research Methods Assignment",
-        "subtitle": "Due Tomorrow",
-        "icon": Icons.assignment,
-        "color": Colors.orange,
-      },
-      {
-        "title": "Epidemiology CAT",
-        "subtitle": "Friday • 10:00 AM",
-        "icon": Icons.edit_note,
-        "color": Colors.green,
-      },
-      {
-        "title": "Mock Quiz",
-        "subtitle": "Saturday • Joseph Generated",
-        "icon": Icons.quiz,
-        "color": Colors.purple,
-      },
-      {
-        "title": "Medical Biostatistics Exam",
-        "subtitle": "4 Days Remaining",
-        "icon": Icons.school,
-        "color": Colors.red,
-      },
-    ];
+    );
+  }
+}
 
+class _TimelineView extends StatelessWidget {
+  final List<TimelineEvent> events;
+
+  const _TimelineView({required this.events});
+
+  static const Map<String, IconData> _icons = {
+    'Upload': Icons.upload_file,
+    'Question': Icons.help_outline,
+    'Quiz': Icons.quiz,
+    'Study': Icons.menu_book,
+    'Learning': Icons.school,
+  };
+
+  static const Map<String, Color> _colors = {
+    'Upload': Colors.blue,
+    'Question': Colors.purple,
+    'Quiz': Colors.orange,
+    'Study': Colors.green,
+    'Learning': Colors.teal,
+  };
+
+  @override
+  Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: const Color(0xffF5F7FB),
       appBar: AppBar(
@@ -45,81 +48,109 @@ class TimelineScreen extends StatelessWidget {
         foregroundColor: Colors.black,
         elevation: 0,
         title: const Text(
-          "Study Timeline",
+          'Study Timeline',
           style: TextStyle(fontWeight: FontWeight.bold),
         ),
       ),
-      body: ListView.builder(
-        padding: const EdgeInsets.all(18),
-        itemCount: events.length,
-        itemBuilder: (context, index) {
-          final event = events[index];
+      body: events.isEmpty
+          ? const Center(
+              child: Text(
+                'No activity yet.\nUpload a document or ask Joseph a question.',
+                textAlign: TextAlign.center,
+                style: TextStyle(color: Colors.grey),
+              ),
+            )
+          : ListView.builder(
+              padding: const EdgeInsets.all(18),
+              itemCount: events.length,
+              itemBuilder: (context, index) {
+                return _eventRow(context, events[index], index);
+              },
+            ),
+    );
+  }
 
-          return Padding(
-            padding: const EdgeInsets.only(bottom: 18),
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Column(
+  Widget _eventRow(
+    BuildContext context,
+    TimelineEvent event,
+    int index,
+  ) {
+    final icon = _icons[event.category] ?? Icons.circle;
+    final color = _colors[event.category] ?? Colors.grey;
+    final isLast = index == events.length - 1;
+
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 18),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Column(
+            children: [
+              CircleAvatar(
+                radius: 22,
+                backgroundColor: color,
+                child: Icon(icon, color: Colors.white, size: 18),
+              ),
+              if (!isLast)
+                Container(
+                  width: 3,
+                  height: 70,
+                  color: Colors.grey.shade300,
+                ),
+            ],
+          ),
+          const SizedBox(width: 15),
+          Expanded(
+            child: Card(
+              elevation: 3,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(18),
+              ),
+              child: Padding(
+                padding: const EdgeInsets.all(18),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    CircleAvatar(
-                      radius: 22,
-                      backgroundColor: event["color"] as Color,
-                      child: Icon(
-                        event["icon"] as IconData,
-                        color: Colors.white,
+                    Text(
+                      event.title,
+                      style: const TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 16,
                       ),
                     ),
-                    if (index != events.length - 1)
-                      Container(
-                        width: 3,
-                        height: 70,
-                        color: Colors.grey.shade300,
+                    const SizedBox(height: 6),
+                    Text(
+                      event.description,
+                      style: TextStyle(color: Colors.grey.shade700),
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    const SizedBox(height: 6),
+                    Text(
+                      _formatTime(event.time),
+                      style: const TextStyle(
+                        color: Colors.grey,
+                        fontSize: 12,
                       ),
+                    ),
                   ],
                 ),
-
-                const SizedBox(width: 15),
-
-                Expanded(
-                  child: Card(
-                    elevation: 3,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(18),
-                    ),
-                    child: Padding(
-                      padding: const EdgeInsets.all(18),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-
-                          Text(
-                            event["title"] as String,
-                            style: const TextStyle(
-                              fontWeight: FontWeight.bold,
-                              fontSize: 18,
-                            ),
-                          ),
-
-                          const SizedBox(height: 8),
-
-                          Text(
-                            event["subtitle"] as String,
-                            style: TextStyle(
-                              color: Colors.grey.shade700,
-                            ),
-                          ),
-
-                        ],
-                      ),
-                    ),
-                  ),
-                ),
-              ],
+              ),
             ),
-          );
-        },
+          ),
+        ],
       ),
     );
+  }
+
+  String _formatTime(DateTime time) {
+    final now = DateTime.now();
+    final diff = now.difference(time);
+
+    if (diff.inMinutes < 1) return 'Just now';
+    if (diff.inMinutes < 60) return '${diff.inMinutes}m ago';
+    if (diff.inHours < 24) return '${diff.inHours}h ago';
+    if (diff.inDays == 1) return 'Yesterday';
+    return '${time.day}/${time.month}/${time.year}';
   }
 }
