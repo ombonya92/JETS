@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
+
 import 'login_screen.dart';
+import 'register_screen.dart';
 
 class WelcomeScreen extends StatelessWidget {
   const WelcomeScreen({super.key});
@@ -7,73 +9,58 @@ class WelcomeScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text("JETS"),
-        centerTitle: true,
-        backgroundColor: Colors.blue,
-      ),
-      body: Center(
+      body: SafeArea(
         child: Padding(
-          padding: const EdgeInsets.all(24.0),
+          padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 40),
           child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
+            crossAxisAlignment: CrossAxisAlignment.center,
             children: [
-              const Icon(
-                Icons.flight_takeoff,
-                size: 100,
-                color: Colors.blue,
-              ),
-
-              const SizedBox(height: 20),
-
+              const Spacer(),
+              const Icon(Icons.flight_takeoff, size: 90, color: Colors.blue),
+              const SizedBox(height: 24),
               const Text(
-                "JETS",
-                style: TextStyle(
-                  fontSize: 40,
-                  fontWeight: FontWeight.bold,
-                ),
+                'JETS',
+                style: TextStyle(fontSize: 42, fontWeight: FontWeight.bold),
               ),
-
               const SizedBox(height: 10),
-
               const Text(
-                "Justified Education Tutored Studies",
+                'Justified Education Tutored Studies',
                 textAlign: TextAlign.center,
-                style: TextStyle(
-                  fontSize: 18,
-                ),
+                style: TextStyle(fontSize: 17),
               ),
-
-              const SizedBox(height: 10),
-
-              const Text(
-                "Learn Smarter. Together.",
-                style: TextStyle(
-                  fontSize: 16,
-                  color: Colors.grey,
-                ),
+              const SizedBox(height: 8),
+              Text(
+                'Learn Smarter. Together.',
+                style: TextStyle(fontSize: 15, color: Colors.grey.shade600),
               ),
-
-              const SizedBox(height: 40),
-
+              const Spacer(),
               SizedBox(
                 width: double.infinity,
                 height: 50,
                 child: ElevatedButton(
-                  onPressed: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (context) => const LoginScreen(),
-                      ),
-                    );
-                  },
+                  onPressed: () => Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (_) => const LoginScreen()),
+                  ),
+                  child: const Text('Sign In', style: TextStyle(fontSize: 17)),
+                ),
+              ),
+              const SizedBox(height: 14),
+              SizedBox(
+                width: double.infinity,
+                height: 50,
+                child: OutlinedButton(
+                  onPressed: () => Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (_) => const RegisterScreen()),
+                  ),
                   child: const Text(
-                    "Get Started",
-                    style: TextStyle(fontSize: 18),
+                    'Create Account',
+                    style: TextStyle(fontSize: 17),
                   ),
                 ),
               ),
+              const SizedBox(height: 24),
             ],
           ),
         ),
