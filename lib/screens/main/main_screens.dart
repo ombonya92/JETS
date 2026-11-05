@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
 
-import '../dashboard_screen.dart';
-import '../joseph_screen.dart';
-import '../library_screen.dart';
-import '../profile_screen.dart';
-import '../timeline_screen.dart';
-import '../upload_screen.dart';
+import 'package:jets/screens/dashboard_screen.dart';
+import 'package:jets/screens/joseph_screen.dart';
+import 'package:jets/screens/library_screen.dart';
+import 'package:jets/screens/profile_screen.dart';
+import 'package:jets/screens/timeline_screen.dart';
+import 'package:jets/screens/upload_screen.dart';
 
 class MainScreens extends StatefulWidget {
   const MainScreens({super.key});
@@ -17,17 +17,16 @@ class MainScreens extends StatefulWidget {
 class _MainScreensState extends State<MainScreens> {
   int _index = 0;
 
-  void _jumpTo(int index) => setState(() => _index = index);
+  void jumpTo(int index) => setState(() => _index = index);
 
   @override
   Widget build(BuildContext context) {
-    final pages = [
-      DashboardScreen(onNavigate: _jumpTo),
+    final pages = <Widget>[
+      DashboardScreen(onNavigate: jumpTo),
       const LibraryScreen(),
       const UploadScreen(),
       const TimelineScreen(),
       const JosephScreen(),
-      const ProfileScreen(),
     ];
 
     return Scaffold(
@@ -61,13 +60,19 @@ class _MainScreensState extends State<MainScreens> {
             selectedIcon: Icon(Icons.smart_toy),
             label: 'Joseph',
           ),
-          NavigationDestination(
-            icon: Icon(Icons.person_outline),
-            selectedIcon: Icon(Icons.person),
-            label: 'Profile',
-          ),
         ],
       ),
+      // Profile accessible via icon in app bar on dashboard.
+      floatingActionButton: _index == 0
+          ? FloatingActionButton.small(
+              heroTag: 'profile',
+              backgroundColor: Colors.white,
+              child: const Icon(Icons.person, color: Colors.blue),
+              onPressed: () => Navigator.of(context).push(
+                MaterialPageRoute(builder: (_) => const ProfileScreen()),
+              ),
+            )
+          : null,
     );
   }
 }

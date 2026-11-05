@@ -1,8 +1,7 @@
-import '../models/document_record.dart';
-import '../state/app_state.dart';
-import '../utils/text_matcher.dart';
-import 'joseph_memory.dart';
-import 'joseph_timeline_engine.dart';
+import 'package:jets/models/document_record.dart';
+import 'package:jets/services/joseph_memory.dart';
+import 'package:jets/services/joseph_timeline_engine.dart';
+import 'package:jets/utils/text_matcher.dart';
 
 class JosephLearningEngine {
   final JosephMemory memory;
@@ -21,7 +20,6 @@ class JosephLearningEngine {
 
   void observeQuestion(String question) {
     memory.rememberQuestion(question);
-
     for (final entry in _trackedTopics.entries) {
       if (TextMatcher.containsTerm(question, entry.key)) {
         _markWeak(entry.value);
@@ -40,7 +38,6 @@ class JosephLearningEngine {
   void observeQuiz({required String topic, required int score}) {
     memory.profile.quizzesCompleted++;
     timeline.completedQuiz(topic, score);
-
     if (score >= _masteryScore) {
       _markStrong(topic);
     } else {

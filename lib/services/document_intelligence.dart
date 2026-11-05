@@ -1,10 +1,9 @@
-import '../models/document_record.dart';
-import '../state/app_state.dart';
-import 'academic_domain_detector.dart';
-import 'joseph_learning_engine.dart';
-import 'joseph_memory.dart';
-import 'knowledge_extractor.dart';
-import 'topic_detector.dart';
+import 'package:jets/models/document_record.dart';
+import 'package:jets/services/academic_domain_detector.dart';
+import 'package:jets/services/joseph_learning_engine.dart';
+import 'package:jets/services/joseph_memory.dart';
+import 'package:jets/services/knowledge_extractor.dart';
+import 'package:jets/services/topic_detector.dart';
 
 class DocumentIntelligence {
   final JosephMemory memory;
@@ -29,6 +28,7 @@ class DocumentIntelligence {
       memory.rememberSubject(topic);
     }
 
+    // Enrich the record with the top detected topics as tags.
     final enriched = record.copyWith(
       tags: (extraction['topics'] as List<String>).take(3).toList(),
     );

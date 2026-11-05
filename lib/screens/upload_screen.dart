@@ -1,10 +1,10 @@
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 
-import '../core/app_controller.dart';
-import '../models/document_record.dart';
-import '../state/app_state.dart';
-import 'analysis_screen.dart';
+import 'package:jets/core/app_controller.dart';
+import 'package:jets/models/document_record.dart';
+import 'package:jets/screens/analysis_screen.dart';
+import 'package:jets/state/app_state.dart';
 
 class UploadScreen extends StatefulWidget {
   const UploadScreen({super.key});
@@ -18,7 +18,6 @@ class _UploadScreenState extends State<UploadScreen> {
 
   Future<void> _pickFile() async {
     final messenger = ScaffoldMessenger.of(context);
-
     setState(() => _loading = true);
 
     try {
@@ -45,10 +44,7 @@ class _UploadScreenState extends State<UploadScreen> {
       }
 
       final controller = AppController.instance;
-      final analysis = await controller.documents.analyzePdf(
-        bytes,
-        picked.name,
-      );
+      final analysis = await controller.documents.analyzePdf(bytes, picked.name);
 
       final record = DocumentRecord(
         id: AppState.generateId(),

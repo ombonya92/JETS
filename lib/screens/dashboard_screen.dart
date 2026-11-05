@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 
-import '../core/app_controller.dart';
-import '../theme/app_colors.dart';
+import 'package:jets/core/app_controller.dart';
+import 'package:jets/theme/app_colors.dart';
 
 class DashboardScreen extends StatelessWidget {
   final void Function(int)? onNavigate;
@@ -19,8 +19,7 @@ class DashboardScreen extends StatelessWidget {
         final state = AppController.instance.state;
         final user = AppController.instance.authState.user;
         final brain = AppController.instance.cognitive.think();
-        final predictions =
-            AppController.instance.prediction.predictions();
+        final predictions = AppController.instance.prediction.predictions();
         final firstName = user?.name.split(' ').first ?? 'Student';
 
         return Scaffold(
@@ -51,10 +50,7 @@ class DashboardScreen extends StatelessWidget {
                 const SizedBox(height: 25),
                 const Text(
                   'Quick Access',
-                  style: TextStyle(
-                    fontSize: 22,
-                    fontWeight: FontWeight.bold,
-                  ),
+                  style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
                 ),
                 const SizedBox(height: 15),
                 GridView.count(
@@ -125,13 +121,7 @@ class DashboardScreen extends StatelessWidget {
   Widget _statsRow(dynamic state) {
     return Row(
       children: [
-        Expanded(
-          child: _statTile(
-            Icons.school,
-            state.learningLevel(),
-            'Level',
-          ),
-        ),
+        Expanded(child: _statTile(Icons.school, state.learningLevel(), 'Level')),
         const SizedBox(width: 10),
         Expanded(
           child: _statTile(
@@ -164,7 +154,7 @@ class DashboardScreen extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 6),
       decoration: BoxDecoration(
-        color: AppColors.primary.withOpacity(0.08),
+        color: AppColors.primary.withValues(alpha: 0.08),
         borderRadius: BorderRadius.circular(14),
       ),
       child: Column(
@@ -173,19 +163,13 @@ class DashboardScreen extends StatelessWidget {
           const SizedBox(height: 6),
           Text(
             value,
-            style: const TextStyle(
-              fontWeight: FontWeight.bold,
-              fontSize: 13,
-            ),
+            style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
             textAlign: TextAlign.center,
             maxLines: 2,
             overflow: TextOverflow.ellipsis,
           ),
           const SizedBox(height: 2),
-          Text(
-            label,
-            style: const TextStyle(color: Colors.grey, fontSize: 11),
-          ),
+          Text(label, style: const TextStyle(color: Colors.grey, fontSize: 11)),
         ],
       ),
     );
@@ -235,10 +219,7 @@ class DashboardScreen extends StatelessWidget {
           children: [
             Icon(icon, size: 38, color: AppColors.primary),
             const SizedBox(height: 10),
-            Text(
-              title,
-              style: const TextStyle(fontWeight: FontWeight.bold),
-            ),
+            Text(title, style: const TextStyle(fontWeight: FontWeight.bold)),
           ],
         ),
       ),

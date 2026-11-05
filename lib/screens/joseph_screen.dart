@@ -1,8 +1,9 @@
 import 'package:flutter/material.dart';
 
-import '../core/app_controller.dart';
-import '../models/chat_message.dart';
-import '../security/input_validator.dart';
+import 'package:jets/core/app_controller.dart';
+import 'package:jets/models/chat_message.dart';
+import 'package:jets/security/input_validator.dart';
+import 'package:jets/widgets/chat_bubble.dart';
 
 class JosephScreen extends StatefulWidget {
   const JosephScreen({super.key});
@@ -45,19 +46,12 @@ class _JosephScreenState extends State<JosephScreen> {
     final text = InputValidator.sanitise(override ?? _input.text);
     if (text.isEmpty) return;
 
-    setState(() {
-      _messages.add(ChatMessage.fromUser(text));
-    });
-
+    setState(() => _messages.add(ChatMessage.fromUser(text)));
     _input.clear();
     _scrollToBottom();
 
     final reply = AppController.instance.cognitive.respond(text);
-
-    setState(() {
-      _messages.add(ChatMessage.fromJoseph(reply));
-    });
-
+    setState(() => _messages.add(ChatMessage.fromJoseph(reply)));
     _scrollToBottom();
   }
 
@@ -78,7 +72,6 @@ class _JosephScreenState extends State<JosephScreen> {
     return Scaffold(
       backgroundColor: const Color(0xffF5F7FB),
       appBar: AppBar(
-        elevation: 0,
         backgroundColor: Colors.blue,
         foregroundColor: Colors.white,
         title: const Row(
@@ -111,11 +104,9 @@ class _JosephScreenState extends State<JosephScreen> {
           Expanded(
             child: ListView.builder(
               controller: _scroll,
-              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+              padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 12),
               itemCount: _messages.length,
-              itemBuilder: (context, index) {
-                return _bubble(_messages[index]);
-              },
+              itemBuilder: (context, index) => ChatBubble(message: _messages[index]),
             ),
           ),
           _inputBar(),
@@ -143,56 +134,6 @@ class _JosephScreenState extends State<JosephScreen> {
               ),
             )
             .toList(),
-      ),
-    );
-  }
-
-  Widget _bubble(ChatMessage message) {
-    final isUser = message.sender == MessageSender.user;
-    return Align(
-      alignment: isUser ? Alignment.centerRight : Alignment.centerLeft,
-      child: Container(
-        margin: const EdgeInsets.symmetric(vertical: 4),
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-        constraints: BoxConstraints(
-          maxWidth: MediaQuery.of(context).size.width * 0.78,
-        ),
-        decoration: BoxDecoration(
-          color: isUser ? Colors.blue : Colors.white,
-          borderRadius: BorderRadius.only(
-            topLeft: const Radius.circular(16),
-            topRight: const Radius.circular(16),
-            bottomLeft: Radius.circular(isUser ? 16 : 4),
-            bottomRight: Radius.circular(isUser ? 4 : 16),
-          ),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withOpacity(0.06),
-              blurRadius: 4,
-              offset: const Offset(0, 2),
-            ),
-          ],
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              message.text,
-              style: TextStyle(
-                color: isUser ? Colors.white : Colors.black87,
-                fontSize: 15,
-              ),
-            ),
-            const SizedBox(height: 4),
-            Text(
-              '${message.time.hour.toString().padLeft(2, '0')}:${message.time.minute.toString().padLeft(2, '0')}',
-              style: TextStyle(
-                fontSize: 10,
-                color: isUser ? Colors.white60 : Colors.grey,
-              ),
-            ),
-          ],
-        ),
       ),
     );
   }
