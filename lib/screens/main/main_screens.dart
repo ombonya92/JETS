@@ -17,21 +17,21 @@ class MainScreens extends StatefulWidget {
 class _MainScreensState extends State<MainScreens> {
   int _index = 0;
 
-  static const List<Widget> _pages = [
-    DashboardScreen(),
-    LibraryScreen(),
-    UploadScreen(),
-    TimelineScreen(),
-    JosephScreen(),
-    ProfileScreen(),
-  ];
-
-  void jumpTo(int index) => setState(() => _index = index);
+  void _jumpTo(int index) => setState(() => _index = index);
 
   @override
   Widget build(BuildContext context) {
+    final pages = [
+      DashboardScreen(onNavigate: _jumpTo),
+      const LibraryScreen(),
+      const UploadScreen(),
+      const TimelineScreen(),
+      const JosephScreen(),
+      const ProfileScreen(),
+    ];
+
     return Scaffold(
-      body: IndexedStack(index: _index, children: _pages),
+      body: IndexedStack(index: _index, children: pages),
       bottomNavigationBar: NavigationBar(
         selectedIndex: _index,
         onDestinationSelected: (i) => setState(() => _index = i),

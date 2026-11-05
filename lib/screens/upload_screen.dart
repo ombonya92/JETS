@@ -45,7 +45,10 @@ class _UploadScreenState extends State<UploadScreen> {
       }
 
       final controller = AppController.instance;
-      final analysis = await controller.documents.analyzePdf(bytes, picked.name);
+      final analysis = await controller.documents.analyzePdf(
+        bytes,
+        picked.name,
+      );
 
       final record = DocumentRecord(
         id: AppState.generateId(),
@@ -56,13 +59,10 @@ class _UploadScreenState extends State<UploadScreen> {
         uploadedAt: DateTime.now(),
       );
 
-      await controller.state.addDocument(record);
-
       if (analysis.hasText) {
-        controller.intelligence.analyze(
-          fileName: analysis.fileName,
-          text: analysis.text,
-        );
+        await controller.intelligence.analyzeRecord(record, analysis.text);
+      } else {
+        await controller.state.addDocument(record);
       }
 
       if (!mounted) return;
@@ -73,7 +73,7 @@ class _UploadScreenState extends State<UploadScreen> {
           builder: (_) => AnalysisScreen(document: analysis),
         ),
       );
-    } catch (e) {
+    } catch (_) {
       messenger.showSnackBar(
         const SnackBar(content: Text('Upload failed. Please try again.')),
       );
@@ -92,11 +92,7 @@ class _UploadScreenState extends State<UploadScreen> {
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Icon(
-                Icons.upload_file,
-                size: 90,
-                color: Colors.blue.shade300,
-              ),
+              Icon(Icons.upload_file, size: 90, color: Colors.blue.shade300),
               const SizedBox(height: 28),
               const Text(
                 'Upload Notes or Past Papers',

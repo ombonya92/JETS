@@ -4,7 +4,9 @@ import '../core/app_controller.dart';
 import '../theme/app_colors.dart';
 
 class DashboardScreen extends StatelessWidget {
-  const DashboardScreen({super.key});
+  final void Function(int)? onNavigate;
+
+  const DashboardScreen({super.key, this.onNavigate});
 
   @override
   Widget build(BuildContext context) {
@@ -16,9 +18,9 @@ class DashboardScreen extends StatelessWidget {
       builder: (context, _) {
         final state = AppController.instance.state;
         final user = AppController.instance.authState.user;
-        final cognitive = AppController.instance.cognitive;
-        final brain = cognitive.think();
-        final predictions = AppController.instance.prediction.predictions();
+        final brain = AppController.instance.cognitive.think();
+        final predictions =
+            AppController.instance.prediction.predictions();
         final firstName = user?.name.split(' ').first ?? 'Student';
 
         return Scaffold(
@@ -43,7 +45,7 @@ class DashboardScreen extends StatelessWidget {
                 const SizedBox(height: 25),
                 _josephCard(firstName, brain),
                 const SizedBox(height: 20),
-                _statsRow(state, brain),
+                _statsRow(state),
                 const SizedBox(height: 20),
                 _predictionsCard(predictions),
                 const SizedBox(height: 25),
@@ -63,10 +65,10 @@ class DashboardScreen extends StatelessWidget {
                   mainAxisSpacing: 15,
                   childAspectRatio: 1.2,
                   children: [
-                    _menuCard(context, Icons.menu_book, 'Library', 1),
-                    _menuCard(context, Icons.upload_file, 'Upload', 2),
-                    _menuCard(context, Icons.timeline, 'Timeline', 3),
-                    _menuCard(context, Icons.smart_toy, 'Joseph', 4),
+                    _menuCard(Icons.library_books, 'Library', 1),
+                    _menuCard(Icons.upload_file, 'Upload', 2),
+                    _menuCard(Icons.timeline, 'Timeline', 3),
+                    _menuCard(Icons.smart_toy, 'Joseph', 4),
                   ],
                 ),
               ],
@@ -109,8 +111,7 @@ class DashboardScreen extends StatelessWidget {
                 ),
                 const SizedBox(height: 6),
                 Text(
-                  brain['insight']?.toString() ??
-                      'Ready to help you study.',
+                  brain['insight']?.toString() ?? 'Ready to help you study.',
                   style: const TextStyle(color: Colors.white, fontSize: 14),
                 ),
               ],
@@ -121,7 +122,7 @@ class DashboardScreen extends StatelessWidget {
     );
   }
 
-  Widget _statsRow(dynamic state, Map<String, dynamic> brain) {
+  Widget _statsRow(dynamic state) {
     return Row(
       children: [
         Expanded(
@@ -222,22 +223,13 @@ class DashboardScreen extends StatelessWidget {
     );
   }
 
-  Widget _menuCard(
-    BuildContext context,
-    IconData icon,
-    String title,
-    int tabIndex,
-  ) {
+  Widget _menuCard(IconData icon, String title, int tabIndex) {
     return Card(
       elevation: 3,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
       child: InkWell(
         borderRadius: BorderRadius.circular(18),
-        onTap: () {
-          final nav = context
-              .findAncestorStateOfType<_MainScreensNavigatorState>();
-          nav?.jumpTo(tabIndex);
-        },
+        onTap: () => onNavigate?.call(tabIndex),
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
@@ -252,9 +244,4 @@ class DashboardScreen extends StatelessWidget {
       ),
     );
   }
-}
-
-// Exposed so DashboardScreen quick-access cards can navigate tabs.
-abstract class _MainScreensNavigatorState {
-  void jumpTo(int index);
 }
