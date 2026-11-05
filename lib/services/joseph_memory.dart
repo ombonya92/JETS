@@ -12,7 +12,7 @@ class JosephMemory {
 
   AppState? _state;
 
-  final JosephBrain brain = JosephBrain(studentName: 'Hanley');
+  final JosephBrain brain = JosephBrain(studentName: '');
 
   final StudentKnowledge knowledge = StudentKnowledge();
 

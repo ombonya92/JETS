@@ -1,61 +1,65 @@
-import 'joseph_knowledge_graph.dart';
+import '../models/document_record.dart';
+import '../state/app_state.dart';
+import '../utils/text_matcher.dart';
 import 'joseph_memory.dart';
+import 'joseph_timeline_engine.dart';
 
-class JosephIntelligenceEngine {
+class JosephLearningEngine {
   final JosephMemory memory;
+  final JosephTimelineEngine timeline;
 
-  final JosephKnowledgeGraph graph;
+  JosephLearningEngine(this.memory, this.timeline);
 
-  JosephIntelligenceEngine({
-    required this.memory,
-    required this.graph,
-  });
+  static const int _masteryScore = 80;
 
-  List<String> recommendations() {
-    final recommendations = <String>[];
+  static const Map<String, String> _trackedTopics = {
+    'regression': 'Regression',
+    'anova': 'ANOVA',
+    'correlation': 'Correlation',
+    'hypothesis': 'Hypothesis Testing',
+  };
 
-    for (final topic in memory.weakTopics) {
-      recommendations.add(
-        "Revise $topic",
-      );
+  void observeQuestion(String question) {
+    memory.rememberQuestion(question);
 
-      recommendations.addAll(
-        graph.relatedTopics(topic),
-      );
-    }
-
-    return recommendations.toSet().toList();
-  }
-
-  List<String> predictedExamTopics() {
-    final predictions = <String>[];
-
-    for (final node in graph.nodes) {
-      if (node.frequency >= 2 &&
-          node.confidence >= 40) {
-        predictions.add(node.name);
+    for (final entry in _trackedTopics.entries) {
+      if (TextMatcher.containsTerm(question, entry.key)) {
+        _markWeak(entry.value);
       }
     }
-
-    return predictions;
   }
 
-  String insight() {
-    if (memory.weakTopics.isEmpty) {
-      return "You are improving consistently.";
+  Future<void> observeUpload(DocumentRecord record) async {
+    memory.rememberUpload(record.fileName);
+    for (final subject in record.subjects) {
+      memory.rememberSubject(subject);
     }
+    await timeline.uploadedFile(record);
+  }
 
-    final topic = memory.weakTopics.first;
+  void observeQuiz({required String topic, required int score}) {
+    memory.profile.quizzesCompleted++;
+    timeline.completedQuiz(topic, score);
 
-    final related =
-        graph.relatedTopics(topic);
-
-    if (related.isEmpty) {
-      return
-          "Focus on $topic before moving to new material.";
+    if (score >= _masteryScore) {
+      _markStrong(topic);
+    } else {
+      _markWeak(topic);
     }
+  }
 
-    return
-        "Improving $topic will also strengthen ${related.take(3).join(", ")}.";
+  void observeStudySession(int minutes) {
+    memory.profile.studyMinutes += minutes;
+    timeline.studySession(minutes);
+  }
+
+  void _markWeak(String topic) {
+    if (memory.weakTopics.contains(topic)) return;
+    memory.rememberWeakTopic(topic);
+  }
+
+  void _markStrong(String topic) {
+    if (memory.strongTopics.contains(topic)) return;
+    memory.rememberStrongTopic(topic);
   }
 }

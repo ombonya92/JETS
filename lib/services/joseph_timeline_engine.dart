@@ -1,4 +1,4 @@
-import '../models/timeline_event.dart';
+import '../models/document_record.dart';
 import '../state/app_state.dart';
 
 class JosephTimelineEngine {
@@ -6,10 +6,10 @@ class JosephTimelineEngine {
 
   JosephTimelineEngine(this.state);
 
-  List<TimelineEvent> get events => state.timeline;
+  List<dynamic> get events => state.timeline;
 
-  void uploadedFile(String fileName, String subject) {
-    state.recordUpload(fileName, subject);
+  Future<void> uploadedFile(DocumentRecord record) async {
+    await state.addDocument(record);
   }
 
   void askedQuestion(String question) {
