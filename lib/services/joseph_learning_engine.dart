@@ -1,3 +1,5 @@
+import '../models/document_record.dart';
+import '../state/app_state.dart';
 import '../utils/text_matcher.dart';
 import 'joseph_memory.dart';
 import 'joseph_timeline_engine.dart';
@@ -27,10 +29,12 @@ class JosephLearningEngine {
     }
   }
 
-  void observeUpload({required String subject, required String fileName}) {
-    memory.rememberUpload(fileName);
-    memory.rememberSubject(subject);
-    timeline.uploadedFile(fileName, subject);
+  Future<void> observeUpload(DocumentRecord record) async {
+    memory.rememberUpload(record.fileName);
+    for (final subject in record.subjects) {
+      memory.rememberSubject(subject);
+    }
+    await timeline.uploadedFile(record);
   }
 
   void observeQuiz({required String topic, required int score}) {
