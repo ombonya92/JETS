@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 
-import '../core/app_controller.dart';
-import '../models/study_task.dart';
-import '../models/timeline_event.dart';
-import '../state/app_state.dart';
+import 'package:jets/core/app_controller.dart';
+import 'package:jets/models/study_task.dart';
+import 'package:jets/models/timeline_event.dart';
+import 'package:jets/state/app_state.dart';
 
 class TimelineScreen extends StatefulWidget {
   const TimelineScreen({super.key});
@@ -69,97 +69,198 @@ class _TimelineScreenState extends State<TimelineScreen>
   }
 
   void _showAddTaskDialog(BuildContext context) {
-    final titleController = TextEditingController();
-    final descController = TextEditingController();
-    DateTime? dueDate;
-
     showDialog<void>(
       context: context,
-      builder: (ctx) => StatefulBuilder(
-        builder: (ctx, setDialogState) => AlertDialog(
-          title: const Text('Add Task'),
-          content: SingleChildScrollView(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
+      builder: (_) => const _AddTaskDialog(),
+    );
+  }
+}
+
+// Separate StatefulWidget for the add-task dialog.
+// Controllers are owned by this widget and disposed in its dispose()
+// so they are always cleaned up regardless of how the dialog closes.
+class _AddTaskDialog extends StatefulWidget {
+  const _AddTaskDialog();
+
+  @override
+  State<_AddTaskDialog> createState() => _AddTaskDialogState();
+}
+
+class _AddTaskDialogState extends State<_AddTaskDialog> {
+  final _titleController = TextEditingController();
+  final _descController = TextEditingController();
+  DateTime? _dueDate;
+
+  @override
+  void dispose() {
+    _titleController.dispose();
+    _descController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _pickDate() async {
+    final picked = await showDatePicker(
+      context: context,
+      initialDate: DateTime.now(),
+      firstDate: DateTime.now(),
+      lastDate: DateTime.now().add(const Duration(days: 365)),
+    );
+    if (picked != null && mounted) {
+      setState(() => _dueDate = picked);
+    }
+  }
+
+  void _submit() {
+    final title = _titleController.text.trim();
+    if (title.isEmpty) return;
+
+    AppController.instance.state.addTask(
+      StudyTask(
+        id: AppState.generateId(),
+        title: title,
+        description: _descController.text.trim().isEmpty
+            ? null
+            : _descController.text.trim(),
+        dueDate: _dueDate,
+      ),
+    );
+
+    Navigator.pop(context);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      title: const Text('Add Task'),
+      content: SingleChildScrollView(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            TextField(
+              controller: _titleController,
+              decoration: const InputDecoration(labelText: 'Title'),
+              autofocus: true,
+              textInputAction: TextInputAction.next,
+            ),
+            const SizedBox(height: 12),
+            TextField(
+              controller: _descController,
+              decoration:
+                  const InputDecoration(labelText: 'Description (optional)'),
+              textInputAction: TextInputAction.done,
+              onSubmitted: (_) => _submit(),
+            ),
+            const SizedBox(height: 12),
+            Row(
               children: [
-                TextField(
-                  controller: titleController,
-                  decoration: const InputDecoration(labelText: 'Title'),
-                  autofocus: true,
-                ),
-                const SizedBox(height: 12),
-                TextField(
-                  controller: descController,
-                  decoration: const InputDecoration(
-                    labelText: 'Description (optional)',
+                Expanded(
+                  child: Text(
+                    _dueDate == null
+                        ? 'No due date'
+                        : 'Due: ${_dueDate!.day}/${_dueDate!.month}/${_dueDate!.year}',
+                    style: TextStyle(color: Colors.grey.shade600),
                   ),
                 ),
-                const SizedBox(height: 12),
-                Row(
-                  children: [
-                    Expanded(
-                      child: Text(
-                        dueDate == null
-                            ? 'No due date'
-                            : 'Due: ${_formatDate(dueDate!)}',
-                        style: TextStyle(color: Colors.grey.shade600),
-                      ),
-                    ),
-                    TextButton(
-                      onPressed: () async {
-                        final picked = await showDatePicker(
-                          context: ctx,
-                          initialDate: DateTime.now(),
-                          firstDate: DateTime.now(),
-                          lastDate: DateTime.now()
-                              .add(const Duration(days: 365)),
-                        );
-                        if (picked != null) {
-                          setDialogState(() => dueDate = picked);
-                        }
-                      },
-                      child: const Text('Set Date'),
-                    ),
-                  ],
+                TextButton(
+                  onPressed: _pickDate,
+                  child: const Text('Set Date'),
                 ),
               ],
-            ),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(ctx),
-              child: const Text('Cancel'),
-            ),
-            ElevatedButton(
-              onPressed: () {
-                final title = titleController.text.trim();
-                if (title.isEmpty) return;
-
-                AppController.instance.state.addTask(
-                  StudyTask(
-                    id: AppState.generateId(),
-                    title: title,
-                    description: descController.text.trim().isEmpty
-                        ? null
-                        : descController.text.trim(),
-                    dueDate: dueDate,
-                  ),
-                );
-                Navigator.pop(ctx);
-              },
-              child: const Text('Add'),
             ),
           ],
         ),
       ),
-    ).then((_) {
-      titleController.dispose();
-      descController.dispose();
-    });
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(context),
+          child: const Text('Cancel'),
+        ),
+        ElevatedButton(
+          onPressed: _submit,
+          child: const Text('Add'),
+        ),
+      ],
+    );
+  }
+}
+
+// Same pattern for the edit dialog.
+class _EditTaskDialog extends StatefulWidget {
+  final StudyTask task;
+  const _EditTaskDialog({required this.task});
+
+  @override
+  State<_EditTaskDialog> createState() => _EditTaskDialogState();
+}
+
+class _EditTaskDialogState extends State<_EditTaskDialog> {
+  late final TextEditingController _titleController;
+  late final TextEditingController _descController;
+
+  @override
+  void initState() {
+    super.initState();
+    _titleController = TextEditingController(text: widget.task.title);
+    _descController =
+        TextEditingController(text: widget.task.description ?? '');
   }
 
-  String _formatDate(DateTime date) {
-    return '${date.day}/${date.month}/${date.year}';
+  @override
+  void dispose() {
+    _titleController.dispose();
+    _descController.dispose();
+    super.dispose();
+  }
+
+  void _submit() {
+    final title = _titleController.text.trim();
+    if (title.isEmpty) return;
+
+    AppController.instance.state.updateTask(
+      widget.task.copyWith(
+        title: title,
+        description: _descController.text.trim().isEmpty
+            ? null
+            : _descController.text.trim(),
+      ),
+    );
+
+    Navigator.pop(context);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      title: const Text('Edit Task'),
+      content: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          TextField(
+            controller: _titleController,
+            decoration: const InputDecoration(labelText: 'Title'),
+            autofocus: true,
+            textInputAction: TextInputAction.next,
+          ),
+          const SizedBox(height: 12),
+          TextField(
+            controller: _descController,
+            decoration: const InputDecoration(labelText: 'Description'),
+            textInputAction: TextInputAction.done,
+            onSubmitted: (_) => _submit(),
+          ),
+        ],
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(context),
+          child: const Text('Cancel'),
+        ),
+        ElevatedButton(
+          onPressed: _submit,
+          child: const Text('Save'),
+        ),
+      ],
+    );
   }
 }
 
@@ -260,10 +361,7 @@ class _ActivityTab extends StatelessWidget {
                     const SizedBox(height: 4),
                     Text(
                       _formatTime(event.time),
-                      style: const TextStyle(
-                        color: Colors.grey,
-                        fontSize: 11,
-                      ),
+                      style: const TextStyle(color: Colors.grey, fontSize: 11),
                     ),
                   ],
                 ),
@@ -358,7 +456,11 @@ class _TasksTab extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             if (task.description != null)
-              Text(task.description!, maxLines: 2, overflow: TextOverflow.ellipsis),
+              Text(
+                task.description!,
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+              ),
             if (task.dueDate != null)
               Text(
                 'Due: ${task.dueDate!.day}/${task.dueDate!.month}/${task.dueDate!.year}',
@@ -395,62 +497,11 @@ class _TasksTab extends StatelessWidget {
       AppController.instance.state.deleteTask(task.id);
       return;
     }
-
     if (action == 'edit') {
-      _showEditDialog(context, task);
+      showDialog<void>(
+        context: context,
+        builder: (_) => _EditTaskDialog(task: task),
+      );
     }
-  }
-
-  void _showEditDialog(BuildContext context, StudyTask task) {
-    final titleController = TextEditingController(text: task.title);
-    final descController =
-        TextEditingController(text: task.description ?? '');
-
-    showDialog<void>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('Edit Task'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            TextField(
-              controller: titleController,
-              decoration: const InputDecoration(labelText: 'Title'),
-              autofocus: true,
-            ),
-            const SizedBox(height: 12),
-            TextField(
-              controller: descController,
-              decoration: const InputDecoration(labelText: 'Description'),
-            ),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx),
-            child: const Text('Cancel'),
-          ),
-          ElevatedButton(
-            onPressed: () {
-              final title = titleController.text.trim();
-              if (title.isEmpty) return;
-              AppController.instance.state.updateTask(
-                task.copyWith(
-                  title: title,
-                  description: descController.text.trim().isEmpty
-                      ? null
-                      : descController.text.trim(),
-                ),
-              );
-              Navigator.pop(ctx);
-            },
-            child: const Text('Save'),
-          ),
-        ],
-      ),
-    ).then((_) {
-      titleController.dispose();
-      descController.dispose();
-    });
   }
 }
