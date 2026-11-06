@@ -20,6 +20,19 @@ class DocumentIntelligence {
     required this.domainDetector,
   });
 
+  // Convenience method for callers that don't yet have a DocumentRecord.
+  Future<void> analyze({required String fileName, required String text}) async {
+    final record = DocumentRecord(
+      id: DateTime.now().microsecondsSinceEpoch.toString(),
+      fileName: fileName,
+      pageCount: 0,
+      subjects: const [],
+      keywords: const [],
+      uploadedAt: DateTime.now(),
+    );
+    await analyzeRecord(record, text);
+  }
+
   Future<void> analyzeRecord(DocumentRecord record, String text) async {
     final extraction = extractor.extract(text);
     final domains = domainDetector.detectDomains(text);
