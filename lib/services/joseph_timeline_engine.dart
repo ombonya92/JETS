@@ -1,5 +1,6 @@
-import '../models/timeline_event.dart';
-import '../state/app_state.dart';
+import 'package:jets/models/document_record.dart';
+import 'package:jets/models/timeline_event.dart';
+import 'package:jets/state/app_state.dart';
 
 class JosephTimelineEngine {
   final AppState state;
@@ -8,27 +9,18 @@ class JosephTimelineEngine {
 
   List<TimelineEvent> get events => state.timeline;
 
-  void uploadedFile(String fileName, String subject) {
-    state.recordUpload(fileName, subject);
+  Future<void> uploadedFile(DocumentRecord record) async {
+    await state.addDocument(record);
   }
 
-  void askedQuestion(String question) {
-    state.recordQuestion(question);
-  }
+  void askedQuestion(String question) => state.recordQuestion(question);
 
-  void completedQuiz(String topic, int score) {
-    state.recordQuiz(topic, score);
-  }
+  void completedQuiz(String topic, int score) =>
+      state.recordQuiz(topic, score);
 
-  void detectedWeakTopic(String topic) {
-    state.recordWeakTopic(topic);
-  }
+  void detectedWeakTopic(String topic) => state.recordWeakTopic(topic);
 
-  void detectedStrongTopic(String topic) {
-    state.recordStrongTopic(topic);
-  }
+  void detectedStrongTopic(String topic) => state.recordStrongTopic(topic);
 
-  void studySession(int minutes) {
-    state.recordStudySession(minutes);
-  }
+  void studySession(int minutes) => state.recordStudySession(minutes);
 }

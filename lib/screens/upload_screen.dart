@@ -1,14 +1,24 @@
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 
-import '../core/app_controller.dart';
-import 'analysis_screen.dart';
+import 'package:jets/core/app_controller.dart';
+import 'package:jets/models/document_record.dart';
+import 'package:jets/screens/analysis_screen.dart';
+import 'package:jets/state/app_state.dart';
 
-class UploadScreen extends StatelessWidget {
+class UploadScreen extends StatefulWidget {
   const UploadScreen({super.key});
 
-  Future<void> _pickFile(BuildContext context) async {
+  @override
+  State<UploadScreen> createState() => _UploadScreenState();
+}
+
+class _UploadScreenState extends State<UploadScreen> {
+  bool _loading = false;
+
+  Future<void> _pickFile() async {
     final messenger = ScaffoldMessenger.of(context);
+    setState(() => _loading = true);
 
     try {
       final result = await FilePicker.platform.pickFiles(
@@ -18,38 +28,40 @@ class UploadScreen extends StatelessWidget {
       );
 
       if (result == null) {
+        setState(() => _loading = false);
         return;
       }
 
-      final pickedFile = result.files.single;
-      final bytes = pickedFile.bytes;
+      final picked = result.files.single;
+      final bytes = picked.bytes;
 
       if (bytes == null) {
         messenger.showSnackBar(
-          const SnackBar(
-            content: Text('JETS could not read this PDF.'),
-          ),
+          const SnackBar(content: Text('Could not read this PDF.')),
         );
+        setState(() => _loading = false);
         return;
       }
 
       final controller = AppController.instance;
+      final analysis = await controller.documents.analyzePdf(bytes, picked.name);
 
-      final analysis = await controller.documents.analyzePdf(
-        bytes,
-        pickedFile.name,
+      final record = DocumentRecord(
+        id: AppState.generateId(),
+        fileName: analysis.fileName,
+        pageCount: analysis.pageCount,
+        subjects: analysis.subjects,
+        keywords: analysis.keywords,
+        uploadedAt: DateTime.now(),
       );
 
       if (analysis.hasText) {
-        controller.intelligence.analyze(
-          fileName: analysis.fileName,
-          text: analysis.text,
-        );
+        await controller.intelligence.analyzeRecord(record, analysis.text);
+      } else {
+        await controller.state.addDocument(record);
       }
 
-      if (!context.mounted) {
-        return;
-      }
+      if (!mounted) return;
 
       Navigator.push(
         context,
@@ -57,56 +69,59 @@ class UploadScreen extends StatelessWidget {
           builder: (_) => AnalysisScreen(document: analysis),
         ),
       );
-    } catch (error) {
-      debugPrint('PDF upload failed: $error');
-
+    } catch (_) {
       messenger.showSnackBar(
-        const SnackBar(
-          content: Text('Upload failed. Please try again.'),
-        ),
+        const SnackBar(content: Text('Upload failed. Please try again.')),
       );
+    } finally {
+      if (mounted) setState(() => _loading = false);
     }
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Upload Notes'),
-      ),
+      appBar: AppBar(title: const Text('Upload Notes')),
       body: Center(
         child: Padding(
-          padding: const EdgeInsets.all(25),
+          padding: const EdgeInsets.all(28),
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              const Icon(
-                Icons.upload_file,
-                size: 100,
-                color: Colors.blue,
-              ),
-              const SizedBox(height: 25),
+              Icon(Icons.upload_file, size: 90, color: Colors.blue.shade300),
+              const SizedBox(height: 28),
               const Text(
-                'Upload your notes or past paper',
+                'Upload Notes or Past Papers',
                 textAlign: TextAlign.center,
-                style: TextStyle(
-                  fontSize: 22,
-                  fontWeight: FontWeight.bold,
-                ),
+                style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
               ),
-              const SizedBox(height: 15),
-              const Text(
-                'Joseph will analyse the document and prepare learning '
-                'resources.',
+              const SizedBox(height: 12),
+              Text(
+                'Joseph will analyse the document and prepare summaries, '
+                'quizzes, questions and a study plan.',
                 textAlign: TextAlign.center,
+                style: TextStyle(color: Colors.grey.shade600),
               ),
-              const SizedBox(height: 40),
+              const SizedBox(height: 44),
               SizedBox(
                 width: double.infinity,
+                height: 52,
                 child: ElevatedButton.icon(
-                  onPressed: () => _pickFile(context),
-                  icon: const Icon(Icons.upload_file),
-                  label: const Text('Choose PDF'),
+                  onPressed: _loading ? null : _pickFile,
+                  icon: _loading
+                      ? const SizedBox(
+                          height: 20,
+                          width: 20,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            color: Colors.white,
+                          ),
+                        )
+                      : const Icon(Icons.upload_file),
+                  label: Text(
+                    _loading ? 'Analysing...' : 'Choose PDF',
+                    style: const TextStyle(fontSize: 17),
+                  ),
                 ),
               ),
             ],

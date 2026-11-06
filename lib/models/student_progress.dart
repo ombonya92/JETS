@@ -52,5 +52,6 @@ class StudentProgress {
     };
   }
 
-  int get totalInteractions => totalUploads + totalQuestions + quizzesCompleted;
+  int get totalInteractions =>
+      totalUploads + totalQuestions + quizzesCompleted;
 }

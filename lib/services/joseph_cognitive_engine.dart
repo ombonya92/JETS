@@ -1,15 +1,16 @@
-import '../models/document_action.dart';
-import '../models/document_analysis.dart';
-import '../utils/text_matcher.dart';
-import 'academic_knowledge_engine.dart';
-import 'adaptive_engine.dart';
-import 'joseph_document_engine.dart';
-import 'joseph_learning_engine.dart';
-import 'joseph_memory.dart';
-import 'joseph_quiz_engine.dart';
-import 'joseph_reasoning.dart';
-import 'personality_engine.dart';
-import 'prediction_engine.dart';
+import 'package:jets/models/document_action.dart';
+import 'package:jets/models/document_analysis.dart';
+import 'package:jets/models/document_record.dart';
+import 'package:jets/services/academic_knowledge_engine.dart';
+import 'package:jets/services/adaptive_engine.dart';
+import 'package:jets/services/joseph_document_engine.dart';
+import 'package:jets/services/joseph_learning_engine.dart';
+import 'package:jets/services/joseph_memory.dart';
+import 'package:jets/services/joseph_quiz_engine.dart';
+import 'package:jets/services/joseph_reasoning.dart';
+import 'package:jets/services/personality_engine.dart';
+import 'package:jets/services/prediction_engine.dart';
+import 'package:jets/utils/text_matcher.dart';
 
 class JosephCognitiveEngine {
   final JosephMemory memory;
@@ -20,9 +21,7 @@ class JosephCognitiveEngine {
   final JosephLearningEngine learning;
 
   final AcademicKnowledgeEngine knowledge = const AcademicKnowledgeEngine();
-
   final JosephDocumentEngine documents = const JosephDocumentEngine();
-
   late final JosephQuizEngine quiz = JosephQuizEngine(knowledge);
 
   JosephCognitiveEngine({
@@ -35,44 +34,19 @@ class JosephCognitiveEngine {
   });
 
   static const int _maxDefinitions = 3;
-
   static const int _maxDocumentTopics = 5;
-
-  static const List<String> _quizTerms = ['quiz', 'quizzes'];
-
-  static const List<String> _studyTerms = [
-    'study',
-    'studies',
-    'studying',
-    'recommend',
-    'recommendation',
-  ];
-
-  static const List<String> _weakTerms = ['weak', 'weakness'];
-
-  static const List<String> _strongTerms = ['strong', 'strength'];
-
-  static const List<String> _progressTerms = ['progress'];
-
-  static const List<String> _predictTerms = ['predict', 'prediction'];
 
   static final RegExp _greetingPattern = RegExp(
     r'^\s*(hello|hi|hey)\b',
     caseSensitive: false,
   );
 
-  static const String _quizGuidance =
-      'I need a topic to build a quiz.\n\n'
-      'Try: quiz anova, quiz regression, quiz photosynthesis or '
-      'quiz epidemiology.';
-
   static const String _fallbackReply =
       'I do not have an answer for that yet.\n\n'
-      'Here is what I can do right now:\n'
-      '- Explain topics such as ANOVA, regression, Python or photosynthesis\n'
-      '- Build a quiz, for example: quiz anova\n'
-      '- Recommend what to study next\n'
-      '- Show your weak topics, strong topics, progress and predictions\n'
+      'What I can do:\n'
+      '- Explain topics: ANOVA, regression, Python, photosynthesis\n'
+      '- Build a quiz, e.g. quiz anova\n'
+      '- Show weak topics, strong topics, progress or predictions\n'
       '- Analyse a PDF from the Upload tab';
 
   Map<String, dynamic> think() {
@@ -88,45 +62,35 @@ class JosephCognitiveEngine {
     };
   }
 
-  // Answers a free-text question typed by the student.
   String respond(String question) {
     learning.observeQuestion(question);
 
-    if (_mentions(question, _quizTerms)) {
+    if (TextMatcher.containsAny(question, ['quiz', 'quizzes'])) {
       return _quizReply(question);
     }
 
     final definitions = knowledge.definitionsIn(question);
+    if (definitions.isNotEmpty) return _definitionReply(definitions);
 
-    if (definitions.isNotEmpty) {
-      return _definitionReply(definitions);
-    }
-
-    if (_mentions(question, _studyTerms)) {
+    if (TextMatcher.containsAny(question, ['study', 'studies', 'recommend'])) {
       return adaptive.nextRecommendation();
     }
 
-    if (_mentions(question, _weakTerms)) {
-      return _topicListReply(
-        title: 'Weak topics',
-        topics: memory.weakTopics,
-        emptyMessage: 'I have not identified your weak topics yet.',
-      );
+    if (TextMatcher.containsAny(question, ['weak', 'weakness'])) {
+      return _topicList('Weak topics', memory.weakTopics,
+          'I have not identified your weak topics yet.');
     }
 
-    if (_mentions(question, _strongTerms)) {
-      return _topicListReply(
-        title: 'Strong topics',
-        topics: memory.strongTopics,
-        emptyMessage: 'You have not mastered any topics yet.',
-      );
+    if (TextMatcher.containsAny(question, ['strong', 'strength'])) {
+      return _topicList('Strong topics', memory.strongTopics,
+          'You have not mastered any topics yet.');
     }
 
-    if (_mentions(question, _progressTerms)) {
+    if (TextMatcher.containsAny(question, ['progress'])) {
       return _progressReply();
     }
 
-    if (_mentions(question, _predictTerms)) {
+    if (TextMatcher.containsAny(question, ['predict', 'prediction'])) {
       return prediction.predictions().join('\n');
     }
 
@@ -137,11 +101,7 @@ class JosephCognitiveEngine {
     return _fallbackReply;
   }
 
-  // Runs [action] on an analysed [document].
-  String respondToDocument(
-    DocumentAction action,
-    DocumentAnalysis document,
-  ) {
+  String respondToDocument(DocumentAction action, DocumentAnalysis document) {
     return switch (action) {
       DocumentAction.askAboutDocument => _askAboutDocument(document),
       DocumentAction.generateQuiz => _quizFromDocument(document),
@@ -154,147 +114,88 @@ class JosephCognitiveEngine {
     };
   }
 
-  void observeQuestion(String question) {
-    learning.observeQuestion(question);
+  Future<void> observeUpload(DocumentRecord record) async {
+    await learning.observeUpload(record);
   }
 
-  void observeUpload({
-    required String subject,
-    required String fileName,
-  }) {
-    learning.observeUpload(
-      subject: subject,
-      fileName: fileName,
-    );
-  }
-
-  void observeQuiz({
-    required String topic,
-    required int score,
-  }) {
-    learning.observeQuiz(
-      topic: topic,
-      score: score,
-    );
+  void observeQuiz({required String topic, required int score}) {
+    learning.observeQuiz(topic: topic, score: score);
   }
 
   void observeStudySession(int minutes) {
     learning.observeStudySession(minutes);
   }
 
-  bool _mentions(String text, List<String> terms) {
-    return TextMatcher.containsAny(text, terms);
-  }
-
   String _quizReply(String question) {
     var topics = knowledge.definitionsIn(question).keys.toList();
-
     if (topics.isEmpty) {
-      topics = knowledge
-          .definitionsIn(memory.weakTopics.join(' '))
-          .keys
-          .toList();
+      topics = knowledge.definitionsIn(memory.weakTopics.join(' ')).keys.toList();
     }
-
     final items = quiz.generateForTopics(topics);
-
     if (items.isEmpty) {
-      return _quizGuidance;
+      return 'I need a topic to build a quiz.\n\n'
+          'Try: quiz anova, quiz regression or quiz photosynthesis.';
     }
-
-    final names = topics.map(knowledge.displayName).join(', ');
-
-    return quiz.render('Quiz on $names', items);
+    return quiz.render('Quiz on ${topics.map(knowledge.displayName).join(", ")}', items);
   }
 
   String _definitionReply(Map<String, String> definitions) {
     final labelled = definitions.length > 1;
     final buffer = StringBuffer('Answer\n');
-
     for (final entry in definitions.entries.take(_maxDefinitions)) {
       final label = labelled ? '${knowledge.displayName(entry.key)}: ' : '';
-
       buffer.write('\n$label${entry.value}\n');
     }
-
     buffer
       ..writeln()
       ..writeln("Joseph's advice")
-      ..writeln('Understanding the idea is more important than memorising it.')
+      ..writeln('Understanding the concept matters more than memorising it.')
       ..writeln()
-      ..write(
-        'To practise, ask me for a quiz, for example: '
-        'quiz ${definitions.keys.first}',
-      );
-
+      ..write('To practise: quiz ${definitions.keys.first}');
     return buffer.toString();
   }
 
-  String _topicListReply({
-    required String title,
-    required List<String> topics,
-    required String emptyMessage,
-  }) {
-    if (topics.isEmpty) {
-      return emptyMessage;
-    }
-
-    return [
-      '$title:',
-      ...topics.map((topic) => '- $topic'),
-    ].join('\n');
+  String _topicList(String title, List<String> topics, String empty) {
+    if (topics.isEmpty) return empty;
+    return '$title:\n${topics.map((t) => '- $t').join('\n')}';
   }
 
   String _progressReply() {
-    final profile = memory.profile;
-
+    final p = memory.profile;
     return [
       'Learning level: ${memory.learningLevel()}',
-      'Uploads: ${profile.totalUploads}',
-      'Questions: ${profile.totalQuestions}',
-      'Quizzes: ${profile.quizzesCompleted}',
-      'Study minutes: ${profile.studyMinutes}',
+      'Uploads: ${p.totalUploads}',
+      'Questions: ${p.totalQuestions}',
+      'Quizzes: ${p.quizzesCompleted}',
+      'Study minutes: ${p.studyMinutes}',
     ].join('\n');
   }
 
   String _askAboutDocument(DocumentAnalysis document) {
-    if (!document.hasText) {
-      return documents.summarize(document);
-    }
-
+    if (!document.hasText) return documents.summarize(document);
     final topics = document.keywords
-        .where((keyword) => knowledge.definitionFor(keyword) != null)
+        .where((k) => knowledge.definitionFor(k) != null)
         .take(_maxDocumentTopics)
         .toList();
-
     if (topics.isEmpty) {
-      return 'I did not find topics in ${document.fileName} that I can '
-          'explain yet.\n\n'
-          'Try Important Topics or Revision Notes for an overview.';
+      return 'I did not find explainable topics in ${document.fileName}.\n\n'
+          'Try Important Topics or Revision Notes.';
     }
-
     return [
-      'Topics from ${document.fileName} that I can explain:',
+      'Topics from ${document.fileName}:',
       '',
-      ...topics.map(
-        (topic) => '- ${knowledge.displayName(topic)}: '
-            '${knowledge.definitionFor(topic)}',
-      ),
+      ...topics.map((t) => '- ${knowledge.displayName(t)}: ${knowledge.definitionFor(t)}'),
       '',
-      'Ask about any of them in the Joseph tab, or type "quiz <topic>" '
-          'for practice questions.',
+      'Ask about any of them, or type "quiz <topic>" for practice.',
     ].join('\n');
   }
 
   String _quizFromDocument(DocumentAnalysis document) {
     final items = quiz.generateForTopics(document.keywords);
-
     if (items.isEmpty) {
-      return 'I could not build quiz questions from the topics found in '
-          '${document.fileName} yet.\n\n'
+      return 'Could not build quiz questions from ${document.fileName}.\n\n'
           'Try Generate Questions or Revision Notes instead.';
     }
-
     return quiz.render('Quiz from ${document.fileName}', items);
   }
 }

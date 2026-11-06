@@ -1,140 +1,35 @@
-import '../models/joseph_dashboard.dart';
-import 'adaptive_engine.dart';
-import 'joseph_learning_engine.dart';
-import 'joseph_memory.dart';
-import 'joseph_reasoning.dart';
-import 'personality_engine.dart';
-import 'prediction_engine.dart';
-import 'joseph_timeline_engine.dart';
+import 'package:jets/models/document_record.dart';
+import 'package:jets/services/adaptive_engine.dart';
+import 'package:jets/services/joseph_learning_engine.dart';
+import 'package:jets/services/joseph_memory.dart';
+import 'package:jets/services/joseph_reasoning.dart';
+import 'package:jets/services/joseph_timeline_engine.dart';
+import 'package:jets/services/personality_engine.dart';
+import 'package:jets/services/prediction_engine.dart';
+import 'package:jets/state/app_state.dart';
 
+// Lightweight facade kept for backward compatibility.
+// New code should use AppController directly.
 class JosephCore {
-  final JosephMemory memory = JosephMemory();
+  final JosephMemory memory;
+  final AppState state;
 
-  late final JosephLearningEngine learning =
-      JosephLearningEngine(
-  memory,
-  JosephTimelineEngine(memory),
-);
+  late final JosephTimelineEngine timeline = JosephTimelineEngine(state);
+  late final JosephLearningEngine learning = JosephLearningEngine(memory, timeline);
+  late final AdaptiveEngine adaptive = AdaptiveEngine(memory);
+  late final PredictionEngine prediction = PredictionEngine(memory);
+  late final PersonalityEngine personality = PersonalityEngine(memory);
+  late final JosephReasoning reasoning = JosephReasoning(memory);
 
-  late final AdaptiveEngine adaptive =
-      AdaptiveEngine(memory);
+  JosephCore({required this.memory, required this.state});
 
-  late final PredictionEngine prediction =
-      PredictionEngine(memory);
+  void askQuestion(String question) => learning.observeQuestion(question);
 
-  late final PersonalityEngine personality =
-      PersonalityEngine(memory);
+  Future<void> uploadNotes(DocumentRecord record) =>
+      learning.observeUpload(record);
 
-  late final JosephReasoning reasoning =
-      JosephReasoning(memory);
+  void completeQuiz({required String topic, required int score}) =>
+      learning.observeQuiz(topic: topic, score: score);
 
-  void askQuestion(String question) {
-    learning.observeQuestion(question);
-  }
-
-  void uploadNotes({
-    required String subject,
-    required String fileName,
-  }) {
-    learning.observeUpload(
-      subject: subject,
-      fileName: fileName,
-    );
-  }
-
-  void completeQuiz({
-    required String topic,
-    required int score,
-  }) {
-    learning.observeQuiz(
-      topic: topic,
-      score: score,
-    );
-  }
-
-  void study(int minutes) {
-    learning.observeStudySession(minutes);
-  }
-
-  JosephDashboard dashboard() {
-    return JosephDashboard(
-      studentName: memory.brain.studentName,
-
-      intelligenceRank: intelligenceRank(),
-
-      progress: intelligenceProgress(),
-
-      learningLevel: memory.learningLevel(),
-
-      learningStyle: learningStyle(),
-
-      recommendation:
-          adaptive.nextRecommendation(),
-
-      insight:
-          reasoning.generateInsight(),
-
-      confidence:
-          "${adaptive.confidenceScore().toStringAsFixed(0)}%",
-
-      uploads: memory.profile.totalUploads,
-
-      questions: memory.profile.totalQuestions,
-
-      quizzes: memory.profile.quizzesCompleted,
-
-      studyMinutes:
-          memory.profile.studyMinutes,
-
-      weakTopics:
-          List.from(memory.weakTopics),
-
-      strongTopics:
-          List.from(memory.strongTopics),
-
-      knowledge:
-          Map.from(memory.knowledge.confidence),
-    );
-  }
-
-  String intelligenceRank() {
-    final score =
-        adaptive.confidenceScore();
-
-    if (score < 20) {
-      return "Observer";
-    }
-
-    if (score < 40) {
-      return "Learning Assistant";
-    }
-
-    if (score < 60) {
-      return "Adaptive Tutor";
-    }
-
-    if (score < 80) {
-      return "Academic Mentor";
-    }
-
-    return "Joseph AI";
-  }
-
-  double intelligenceProgress() {
-    return adaptive.confidenceScore() / 100;
-  }
-
-  String learningStyle() {
-    if (memory.profile.totalQuestions >
-        memory.profile.totalUploads) {
-      return "Question Driven";
-    }
-
-    if (memory.profile.totalUploads >
-        memory.profile.totalQuestions) {
-      return "Document Driven";
-    }
-
-    return "Balanced";
-  }
+  void study(int minutes) => learning.observeStudySession(minutes);
 }

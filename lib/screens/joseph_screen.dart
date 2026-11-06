@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 
-import '../core/app_controller.dart';
-import '../state/app_state.dart';
+import 'package:jets/core/app_controller.dart';
+import 'package:jets/models/chat_message.dart';
+import 'package:jets/security/input_validator.dart';
+import 'package:jets/widgets/chat_bubble.dart';
 
 class JosephScreen extends StatefulWidget {
   const JosephScreen({super.key});
@@ -11,345 +13,177 @@ class JosephScreen extends StatefulWidget {
 }
 
 class _JosephScreenState extends State<JosephScreen> {
+  final List<ChatMessage> _messages = [];
   final TextEditingController _input = TextEditingController();
+  final ScrollController _scroll = ScrollController();
 
-  void _ask() {
-    final question = _input.text.trim();
-    if (question.isEmpty) return;
+  static const List<_QuickChip> _chips = [
+    _QuickChip(Icons.quiz, 'quiz anova'),
+    _QuickChip(Icons.school, 'my weak topics'),
+    _QuickChip(Icons.analytics, 'my progress'),
+    _QuickChip(Icons.auto_graph, 'exam prediction'),
+    _QuickChip(Icons.menu_book, 'study plan'),
+    _QuickChip(Icons.psychology, 'my strong topics'),
+  ];
 
-    final reply = AppController.instance.cognitive.respond(question);
-    _input.clear();
-
-    showDialog<void>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('Joseph'),
-        content: SingleChildScrollView(child: Text(reply)),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx),
-            child: const Text('OK'),
-          ),
-        ],
-      ),
-    );
+  @override
+  void initState() {
+    super.initState();
+    final brain = AppController.instance.cognitive.think();
+    final greeting = brain['greeting']?.toString() ??
+        'Hello! Ask me anything about your studies.';
+    _messages.add(ChatMessage.fromJoseph(greeting));
   }
 
   @override
   void dispose() {
     _input.dispose();
+    _scroll.dispose();
     super.dispose();
   }
 
-  @override
-  Widget build(BuildContext context) {
-    return ListenableBuilder(
-      listenable: AppController.instance.state,
-      builder: (context, _) {
-        final state = AppController.instance.state;
-        return _JosephView(
-          state: state,
-          input: _input,
-          onAsk: _ask,
-        );
-      },
-    );
+  void _send([String? override]) {
+    final text = InputValidator.sanitise(override ?? _input.text);
+    if (text.isEmpty) return;
+
+    setState(() => _messages.add(ChatMessage.fromUser(text)));
+    _input.clear();
+    _scrollToBottom();
+
+    final reply = AppController.instance.cognitive.respond(text);
+    setState(() => _messages.add(ChatMessage.fromJoseph(reply)));
+    _scrollToBottom();
   }
-}
 
-class _JosephView extends StatelessWidget {
-  final AppState state;
-  final TextEditingController input;
-  final VoidCallback onAsk;
-
-  const _JosephView({
-    required this.state,
-    required this.input,
-    required this.onAsk,
-  });
-
-  static const List<_Chip> _chips = [
-    _Chip(Icons.quiz, 'quiz anova'),
-    _Chip(Icons.summarize, 'Summarize Notes'),
-    _Chip(Icons.menu_book, 'Study Plan'),
-    _Chip(Icons.analytics, 'my progress'),
-    _Chip(Icons.auto_graph, 'my weak topics'),
-    _Chip(Icons.psychology_alt, 'my strong topics'),
-  ];
+  void _scrollToBottom() {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (_scroll.hasClients) {
+        _scroll.animateTo(
+          _scroll.position.maxScrollExtent,
+          duration: const Duration(milliseconds: 300),
+          curve: Curves.easeOut,
+        );
+      }
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
-    final controller = AppController.instance;
-    final brain = controller.cognitive.think();
-
     return Scaffold(
       backgroundColor: const Color(0xffF5F7FB),
       appBar: AppBar(
-        elevation: 0,
-        backgroundColor: Colors.transparent,
-        foregroundColor: Colors.black,
-        title: const Text(
-          'Joseph AI',
-          style: TextStyle(fontWeight: FontWeight.bold),
-        ),
-      ),
-      body: SafeArea(
-        child: Column(
+        backgroundColor: Colors.blue,
+        foregroundColor: Colors.white,
+        title: const Row(
           children: [
-            _header(brain),
-            Expanded(
-              child: ListView(
-                padding: const EdgeInsets.symmetric(horizontal: 18),
-                children: [
-                  _statusCard(state, brain),
-                  const SizedBox(height: 20),
-                  const Text(
-                    'Quick Actions',
-                    style: TextStyle(
-                      fontSize: 20,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                  const SizedBox(height: 15),
-                  _chipRow(context),
-                  const SizedBox(height: 30),
-                ],
-              ),
+            CircleAvatar(
+              radius: 16,
+              backgroundColor: Colors.white,
+              child: Icon(Icons.smart_toy, color: Colors.blue, size: 18),
             ),
-            _inputBar(context),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _header(Map<String, dynamic> brain) {
-    return Container(
-      margin: const EdgeInsets.all(18),
-      padding: const EdgeInsets.all(22),
-      decoration: BoxDecoration(
-        color: Colors.blue,
-        borderRadius: BorderRadius.circular(20),
-      ),
-      child: Row(
-        children: [
-          const CircleAvatar(
-            radius: 30,
-            backgroundColor: Colors.white,
-            child: Icon(Icons.smart_toy, color: Colors.blue, size: 34),
-          ),
-          const SizedBox(width: 16),
-          Expanded(
-            child: Column(
+            SizedBox(width: 10),
+            Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  brain['greeting']?.toString() ?? 'Hello!',
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                  ),
+                  'Joseph',
+                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
                 ),
-                const SizedBox(height: 6),
                 Text(
-                  brain['insight']?.toString() ?? '',
-                  style: const TextStyle(color: Colors.white, fontSize: 14),
+                  'AI Study Assistant',
+                  style: TextStyle(fontSize: 11, color: Colors.white70),
                 ),
               ],
             ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _statusCard(AppState state, Map<String, dynamic> brain) {
-    return Card(
-      elevation: 3,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
-      child: Padding(
-        padding: const EdgeInsets.all(20),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Text(
-              'Learning Status',
-              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 20),
-            ),
-            const SizedBox(height: 20),
-            Row(
-              children: [
-                Expanded(
-                  child: _statBox(
-                    'Level',
-                    brain['learningLevel']?.toString() ?? '',
-                    Icons.school,
-                  ),
-                ),
-                const SizedBox(width: 15),
-                Expanded(
-                  child: _statBox(
-                    'Confidence',
-                    '${brain['confidence']?.toStringAsFixed(0) ?? '0'}%',
-                    Icons.psychology,
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 20),
-            Row(
-              children: [
-                Expanded(
-                  child: _statBox(
-                    'Uploads',
-                    '${state.progress.totalUploads}',
-                    Icons.upload_file,
-                  ),
-                ),
-                const SizedBox(width: 15),
-                Expanded(
-                  child: _statBox(
-                    'Questions',
-                    '${state.progress.totalQuestions}',
-                    Icons.help_outline,
-                  ),
-                ),
-              ],
-            ),
-            if (state.progress.weakTopics.isNotEmpty) ...[
-              const SizedBox(height: 20),
-              const Text(
-                'Needs Work',
-                style: TextStyle(fontWeight: FontWeight.bold),
-              ),
-              const SizedBox(height: 8),
-              Wrap(
-                spacing: 8,
-                runSpacing: 6,
-                children: state.progress.weakTopics
-                    .map(
-                      (t) => Chip(
-                        label: Text(t),
-                        backgroundColor: Colors.red.shade50,
-                        side: BorderSide(color: Colors.red.shade200),
-                      ),
-                    )
-                    .toList(),
-              ),
-            ],
-            if (state.progress.strongTopics.isNotEmpty) ...[
-              const SizedBox(height: 16),
-              const Text(
-                'Mastered',
-                style: TextStyle(fontWeight: FontWeight.bold),
-              ),
-              const SizedBox(height: 8),
-              Wrap(
-                spacing: 8,
-                runSpacing: 6,
-                children: state.progress.strongTopics
-                    .map(
-                      (t) => Chip(
-                        label: Text(t),
-                        backgroundColor: Colors.green.shade50,
-                        side: BorderSide(color: Colors.green.shade200),
-                      ),
-                    )
-                    .toList(),
-              ),
-            ],
           ],
         ),
       ),
-    );
-  }
-
-  Widget _statBox(String label, String value, IconData icon) {
-    return Container(
-      padding: const EdgeInsets.symmetric(vertical: 18, horizontal: 15),
-      decoration: BoxDecoration(
-        color: Colors.blue.shade50,
-        borderRadius: BorderRadius.circular(16),
-      ),
-      child: Column(
+      body: Column(
         children: [
-          Icon(icon, color: Colors.blue, size: 28),
-          const SizedBox(height: 10),
-          Text(
-            value,
-            style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
-            textAlign: TextAlign.center,
-            maxLines: 2,
-            overflow: TextOverflow.ellipsis,
+          _chipsBar(),
+          Expanded(
+            child: ListView.builder(
+              controller: _scroll,
+              padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 12),
+              itemCount: _messages.length,
+              itemBuilder: (context, index) => ChatBubble(message: _messages[index]),
+            ),
           ),
-          const SizedBox(height: 5),
-          Text(label, style: const TextStyle(color: Colors.grey, fontSize: 12)),
+          _inputBar(),
         ],
       ),
     );
   }
 
-  Widget _chipRow(BuildContext context) {
-    return Wrap(
-      spacing: 12,
-      runSpacing: 12,
-      children: _chips.map((chip) => _actionChip(context, chip)).toList(),
-    );
-  }
-
-  Widget _actionChip(BuildContext context, _Chip chip) {
-    return ActionChip(
-      avatar: Icon(chip.icon, size: 18, color: Colors.blue),
-      label: Text(chip.label),
-      onPressed: () {
-        input.text = chip.label;
-        onAsk();
-      },
-    );
-  }
-
-  Widget _inputBar(BuildContext context) {
+  Widget _chipsBar() {
     return Container(
-      padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
       color: Colors.white,
-      child: Row(
-        children: [
-          Expanded(
-            child: TextField(
-              controller: input,
-              onSubmitted: (_) => onAsk(),
-              decoration: InputDecoration(
-                hintText: 'Ask Joseph anything.',
-                filled: true,
-                fillColor: Colors.grey.shade100,
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(30),
-                  borderSide: BorderSide.none,
+      height: 46,
+      child: ListView(
+        scrollDirection: Axis.horizontal,
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+        children: _chips
+            .map(
+              (chip) => Padding(
+                padding: const EdgeInsets.only(right: 8),
+                child: ActionChip(
+                  avatar: Icon(chip.icon, size: 15, color: Colors.blue),
+                  label: Text(chip.label, style: const TextStyle(fontSize: 12)),
+                  onPressed: () => _send(chip.label),
                 ),
-                contentPadding: const EdgeInsets.symmetric(
-                  horizontal: 20,
-                  vertical: 14,
+              ),
+            )
+            .toList(),
+      ),
+    );
+  }
+
+  Widget _inputBar() {
+    return Container(
+      color: Colors.white,
+      padding: const EdgeInsets.fromLTRB(12, 8, 12, 12),
+      child: SafeArea(
+        top: false,
+        child: Row(
+          children: [
+            Expanded(
+              child: TextField(
+                controller: _input,
+                onSubmitted: (_) => _send(),
+                minLines: 1,
+                maxLines: 4,
+                decoration: InputDecoration(
+                  hintText: 'Ask Joseph anything...',
+                  filled: true,
+                  fillColor: Colors.grey.shade100,
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(24),
+                    borderSide: BorderSide.none,
+                  ),
+                  contentPadding: const EdgeInsets.symmetric(
+                    horizontal: 18,
+                    vertical: 12,
+                  ),
                 ),
               ),
             ),
-          ),
-          const SizedBox(width: 10),
-          FloatingActionButton(
-            heroTag: 'sendJoseph',
-            mini: true,
-            backgroundColor: Colors.blue,
-            onPressed: onAsk,
-            child: const Icon(Icons.send, color: Colors.white),
-          ),
-        ],
+            const SizedBox(width: 8),
+            FloatingActionButton(
+              heroTag: 'josephSend',
+              mini: true,
+              backgroundColor: Colors.blue,
+              onPressed: _send,
+              child: const Icon(Icons.send, color: Colors.white, size: 20),
+            ),
+          ],
+        ),
       ),
     );
   }
 }
 
-class _Chip {
+class _QuickChip {
   final IconData icon;
   final String label;
-  const _Chip(this.icon, this.label);
+  const _QuickChip(this.icon, this.label);
 }

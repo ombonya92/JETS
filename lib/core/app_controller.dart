@@ -8,12 +8,12 @@ import '../services/joseph_learning_engine.dart';
 import '../services/joseph_memory.dart';
 import '../services/joseph_reasoning.dart';
 import '../services/joseph_recommendation_engine.dart';
-import '../services/joseph_service.dart';
 import '../services/joseph_timeline_engine.dart';
 import '../services/personality_engine.dart';
 import '../services/prediction_engine.dart';
 import '../services/topic_detector.dart';
 import '../state/app_state.dart';
+import '../state/auth_state.dart';
 
 class AppController {
   static final AppController instance = AppController._internal();
@@ -22,13 +22,13 @@ class AppController {
 
   AppController._internal();
 
+  final AuthState authState = AuthState();
+
   final AppState state = AppState();
 
   final JosephMemory memory = JosephMemory();
 
   late final JosephKnowledgeGraph knowledgeGraph = JosephKnowledgeGraph();
-
-  late final JosephService joseph = JosephService();
 
   late final TopicDetector detector = TopicDetector();
 
@@ -70,7 +70,10 @@ class AppController {
   );
 
   Future<void> init() async {
-    await state.load();
+    await Future.wait([
+      authState.initialise(),
+      state.load(),
+    ]);
     memory.attach(state);
   }
 }
